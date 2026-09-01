@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Respuesta OIRS · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Respuesta a reclamo OIRS</h1>
+<p class="sub">Arma el texto completo —instrucciones, tiempos de espera, ejemplo y caso— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Reclamo (reclamante, fecha y texto, tal como llegó)</label>
+<textarea id="reclamo" style="min-height:200px" placeholder="Ej: Reclamo emitido por el Sr. Juan Pérez, padre del menor Diego Pérez, el 15 de agosto de 2026. [texto del reclamo con su redacción original]"></textarea>
+
+<label>DAU y registros clínicos</label>
+<textarea id="dau" placeholder="Edad, motivo de consulta, categorización y hora, hora de ingreso a box y de atención médica, signos vitales, examen físico, exámenes, tratamiento, diagnóstico e indicaciones"></textarea>
+
+<label>Informe del profesional involucrado <span style="font-weight:400">(opcional)</span></label>
+<textarea id="informe" placeholder="Si no hay informe, deja vacío: la sección se omite y se renumera"></textarea>
+
+<label>Antecedentes adicionales <span style="font-weight:400">(opcional)</span></label>
+<textarea id="extra" placeholder="Registros de enfermería, censo del turno, eventos de reanimación, contingencias, antecedentes administrativos, carpeta aportada por el reclamante"></textarea>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones (rol, reglas, estructura y formato)</summary>
+  <textarea id="instrTxt" style="min-height:280px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Conocimientos y ejemplos</summary>
+  <p class="sub" style="margin-top:8px">Agrega aquí todo lo que la IA deba saber: respuestas modelo, criterios del servicio, normativa, tablas. Se guarda en este dispositivo y viaja siempre con el texto.</p>
+  <textarea id="conocTxt" style="min-height:280px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarConoc">Guardar conocimientos</button>
+  <button class="sec" id="restaurarConoc">Restaurar los originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino" style="width:100%; padding:11px; font-size:16px; border:1px solid #c3ccd6; border-radius:8px; background:#fff">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <p class="sub" style="margin-top:10px">Se abre una conversación nueva y normal: el texto copiado ya lleva las instrucciones y los conocimientos, así que no depende de ningún GPT ni Gem configurado.</p>
+</details>
+
+<script>
+const DEST_KEY = 'doclam_oirs_destino';
+const INSTR_KEY = 'doclam_oirs_instr';
+const CONOC_KEY = 'doclam_oirs_conoc';
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { return localStorage.getItem(k) !== null ? localStorage.getItem(k) : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+$('destino').value = get(DEST_KEY) || 'https://chatgpt.com/';
+$('destino').addEventListener('change', () => { set(DEST_KEY, $('destino').value); msg('Destino guardado.', 'ok'); });
+
+const INSTRUCCIONES = `Actúa como médico jefe del Servicio de Urgencias, con formación en comunicación profesional, ética clínica, leyes chilenas y redacción institucional avanzada, especializado en la respuesta formal de reclamos OIRS. Responde de manera clara, estructurada, empática y fundamentada. Analiza internamente el caso con el método de los 6 sombreros, sin mostrar ese análisis.
+
+REGLAS:
+1. Responde punto por punto todos los elementos del reclamo, sin omitir ninguno.
+2. Tono respetuoso, profesional y empático; lenguaje técnico claro, sin ambigüedades.
+3. No uses la palabra "protocolo". Usa: lineamientos institucionales, criterio clínico, prácticas asistenciales vigentes, indicaciones técnicas.
+4. Los tiempos de espera se miden SIEMPRE desde la categorización, nunca desde el ingreso o la llegada al establecimiento. Calcula y señala explícitamente los minutos transcurridos. Tiempos de referencia del Hospital Militar del Norte:
+   C1 Resucitación (rojo): atención inmediata.
+   C2 Emergencia (naranja): 10 minutos.
+   C3 Urgencia (amarillo): 60 minutos.
+   C4 Urgencia menor (verde): 2 horas.
+   C5 Sin urgencia (azul): 4 horas.
+   Estos tiempos son de referencia y pueden extenderse según la demanda asistencial y la presencia simultánea de pacientes de mayor gravedad; cuando se superen, explica la causa documentada.
+5. Distingue siempre entre hechos documentados y percepciones válidas del reclamante.
+6. No compares clínicamente con otros pacientes ni entregues datos de terceros (información confidencial).
+7. Si un aspecto excede el ámbito del Servicio de Urgencias (administrativo, logístico, infraestructura), señálalo y deriva a la unidad competente.
+8. Si una sección no aplica por falta de antecedentes, omítela completa y renumera las siguientes.
+
+ESTRUCTURA:
+Informo a Ud. que se ha revisado detalladamente el reclamo interpuesto por (nombre), emitido el (fecha).
+
+Resumen del reclamo:
+Resumen sintético, objetivo y respetuoso de todos los aspectos señalados, en lenguaje administrativo neutro.
+
+1. Análisis del DAU:
+Edad, motivo de consulta, categorización y hora, signos vitales, hallazgos relevantes; cálculo explícito del tiempo transcurrido desde la categorización hasta la atención médica y su concordancia con la categoría; manejo diagnóstico y terapéutico; diagnóstico e indicaciones de egreso.
+
+2. Informe del médico o profesional involucrado:
+Síntesis del informe, incluyendo reconocimientos, disculpas o explicaciones técnicas. OMITIR ESTA SECCIÓN COMPLETA Y RENUMERAR SI NO SE ENTREGA INFORME.
+
+3. Consideraciones adicionales:
+Elementos no abordados por el DAU ni el informe: registros de enfermería, carga asistencial del turno, contingencias, aspectos administrativos, antecedentes aportados por el reclamante.
+
+4. Apreciación clínica y administrativa del Jefe del Servicio:
+Evaluación global según lineamientos clínico-asistenciales; si la atención fue o no adecuada, técnica y comunicacionalmente; reconocimiento explícito de la percepción del reclamante.
+
+5. Recomendaciones:
+Sugerencias individuales o colectivas, en lenguaje propositivo, no punitivo.
+
+6. Compromiso y mejora continua:
+Compromiso del Servicio de Urgencias con la atención humanizada y acciones de refuerzo en curso.
+
+Y a continuación, sin título alguno, textual:
+Agradecemos su observación, cuya retroalimentación consideramos muy valiosa para la mejora continua de nuestro servicio. Lamentamos que la experiencia no haya cumplido sus expectativas y nos comprometemos a seguir fortaleciendo una atención centrada en el respeto, la seguridad y la dignidad de nuestros pacientes.
+
+FORMATO DE SALIDA (obligatorio):
+- Entrega la respuesta como texto formateado normal, NUNCA dentro de un bloque de código.
+- Subtítulos en negrita; el resto en texto normal, tamaño 12.
+- Solo párrafos: sin tablas, sin viñetas ni numeración automática, sin emojis, sin líneas separadoras.
+- Debe quedar lista para seleccionar, copiar y pegar directamente en Documentos de Google y en Word conservando las negritas.
+- Sin clasificación interna, sin el título "Palabras finales", sin comentarios tuyos antes ni después del texto.`;
+
+const EJEMPLO = `Informo a Ud. que se ha revisado detalladamente el reclamo interpuesto por: Sr. [Reclamante], padre del menor [Paciente], emitido el [fecha].
+
+Resumen del reclamo:
+
+El reclamante manifiesta inquietudes respecto de la atención otorgada a su hijo [Paciente], de 11 años, en el Servicio de Urgencias. Señala que el paciente fue ingresado aproximadamente a las 09:40 horas y evaluado médicamente cerca de las 10:45 horas.
+
+Sus principales consultas se relacionan con la cantidad de pacientes que habría atendido la médica pediatra antes de evaluar a su hijo; las diferencias observadas entre el manejo de [Paciente] y el de otro paciente pediátrico que, según su apreciación, presentaba síntomas similares; y la necesidad y justificación de los múltiples exámenes solicitados a su hijo.
+
+Asimismo, solicita revisar específicamente el examen físico registrado durante la atención y plantea su preocupación respecto de una eventual sobreindicación de estudios, considerando que el cuadro podría corresponder a una consulta por mialgias.
+
+1. Análisis del DAU:
+
+Paciente de 11 años y 11 meses, sin antecedentes mórbidos relevantes consignados, traído por su padre por un cuadro de seis días de evolución caracterizado por congestión nasal y malestar general.
+
+Fue categorizado C4 a las 09:41 horas. Se registra su ingreso al área asistencial a las 10:34 horas y atención médica a las 10:45 horas, es decir, 1 hora y 4 minutos después de la categorización. Este tiempo se encuentra dentro del margen de atención considerado para pacientes categorizados C4, que puede extenderse hasta 2 horas desde la categorización, dependiendo de la condición clínica de los pacientes presentes y de la demanda asistencial del momento.
+
+En la evaluación médica se consignó un cuadro de aproximadamente seis días de evolución con mialgias, congestión nasal y odinofagia, asociado a aparición de fiebre el día de la consulta. En los signos vitales se describe al paciente febril y con tendencia a la taquicardia.
+
+Respecto del examen físico, el registro disponible describe principalmente una faringe congestiva, sin consignarse otros hallazgos que permitieran establecer clínicamente un foco infeccioso bacteriano específico.
+
+Considerando la duración de los síntomas, la presencia de fiebre de aparición reciente y la ausencia de un foco claramente definido al examen físico, la médica tratante solicitó estudios complementarios orientados a descartar causas bacterianas u otros focos de infección. Se realizaron hemograma y proteína C reactiva, examen de orina y urocultivo, radiografía de tórax y radiografía de senos paranasales.
+
+Durante la permanencia en el Servicio de Urgencias se indicó tratamiento sintomático, incluyendo paracetamol, hidratación con suero fisiológico, betametasona y omeprazol.
+
+Los estudios realizados no evidenciaron elementos que justificaran el inicio de tratamiento antibiótico, estableciéndose como diagnóstico de egreso una virosis respiratoria alta y manteniéndose manejo ambulatorio dirigido al control de los síntomas.
+
+2. Informe de la profesional involucrada:
+
+La Dra. [Profesional] informa que la evaluación y las decisiones adoptadas se fundamentaron exclusivamente en las características clínicas particulares de [Paciente], considerando sus antecedentes, duración de los síntomas, signos vitales, hallazgos del examen físico y evolución del cuadro.
+
+Señala que la presencia de aproximadamente seis días de síntomas respiratorios y generales, junto con la aparición tardía de fiebre y la ausencia de un foco bacteriano definido en el examen físico, hicieron necesario considerar como diagnóstico diferencial un síndrome febril sin foco claramente identificado.
+
+En este contexto, el hemograma y la proteína C reactiva fueron solicitados como apoyo para evaluar la existencia de un proceso inflamatorio o infeccioso; la radiografía de tórax, para descartar un foco neumónico; la radiografía de senos paranasales, para evaluar eventual compromiso sinusal; y los estudios de orina, para descartar una infección urinaria como eventual causa de fiebre sin foco evidente.
+
+La profesional informa además que, una vez conocidos los resultados, no se encontraron elementos sugerentes de una infección bacteriana que justificara tratamiento antibiótico, por lo que se mantuvo un manejo sintomático y se entregaron indicaciones de vigilancia y reconsulta.
+
+Respecto de la comparación con otro menor atendido en el Servicio, explica que la evaluación médica y la indicación de exámenes se realizan de manera individual para cada paciente y dependen, entre otros elementos, de la duración del cuadro, antecedentes, signos vitales, examen físico e hipótesis diagnósticas planteadas durante la evaluación.
+
+3. Consideraciones adicionales:
+
+Respecto de la consulta acerca de cuántos pacientes fueron atendidos por la médica antes de [Paciente], los antecedentes clínicos aportados para la revisión de este reclamo no permiten establecer de manera fundada dicho número. Adicionalmente, el orden de atención en un Servicio de Urgencias no depende exclusivamente del orden de llegada, sino prioritariamente de la categorización y condición clínica de los pacientes.
+
+En relación con el otro menor mencionado en el reclamo, no corresponde efectuar comparaciones clínicas específicas ni entregar antecedentes respecto de su evaluación, exámenes o tratamiento, por tratarse de información clínica confidencial de un tercero.
+
+La similitud aparente de algunos síntomas tampoco determina necesariamente una conducta médica idéntica. Dos pacientes pueden presentar manifestaciones generales semejantes y, sin embargo, diferir en duración de los síntomas, temperatura, frecuencia cardiaca, antecedentes, hallazgos del examen físico o evolución clínica, circunstancias que pueden justificar decisiones diagnósticas distintas.
+
+En cuanto a la inquietud respecto de una posible “sobreexaminación”, la revisión de los antecedentes permite establecer que los estudios solicitados tuvieron objetivos diagnósticos definidos y estuvieron orientados a descartar focos bacterianos potencialmente relevantes frente a un cuadro febril de varios días de evolución y sin un origen claramente identificado al examen físico.
+
+4. Apreciación clínica y administrativa del Jefe del Servicio:
+
+Tras revisar los antecedentes clínicos disponibles y el informe de la profesional tratante, se considera que la evaluación efectuada a [Paciente] fue concordante con su condición clínica al momento de la consulta.
+
+Si bien las mialgias formaban parte de los síntomas referidos, la consulta no se limitaba a una mialgia aislada. El registro clínico da cuenta de un cuadro de seis días de evolución con síntomas respiratorios y generales, al que se agregó fiebre, encontrándose además febril al momento de la evaluación. Estos antecedentes justificaban ampliar el estudio más allá del tratamiento sintomático de las mialgias.
+
+La solicitud de hemograma, proteína C reactiva, estudio urinario y estudios radiológicos tuvo como finalidad descartar diferentes focos de infección bacteriana antes de definir la conducta definitiva. El hecho de que los resultados fueran finalmente tranquilizadores y permitieran diagnosticar una probable infección viral no determina que los exámenes hayan sido innecesarios; por el contrario, sus resultados contribuyeron a descartar patologías que habrían requerido un manejo diferente y permitieron evitar la indicación injustificada de antibióticos.
+
+Por tanto, con los antecedentes disponibles, los exámenes solicitados se consideran clínicamente justificables dentro del contexto de la evaluación efectuada.
+
+Respecto de la percepción del reclamante sobre una eventual diferencia con el manejo otorgado a otro niño, comprendemos que observar conductas distintas frente a síntomas aparentemente semejantes pueda generar dudas. Sin embargo, las decisiones clínicas deben ser individualizadas y no resulta posible establecer equivalencia entre ambos casos únicamente a partir de lo observado por sus acompañantes.
+
+5. Recomendaciones:
+
+A partir de este reclamo, se considera pertinente reforzar con el equipo médico la importancia de explicar a pacientes y acompañantes, especialmente cuando se solicitan varios estudios, cuál es la finalidad de cada examen y qué diagnósticos se pretende confirmar o descartar.
+
+6. Compromiso y mejora continua:
+
+El Servicio de Urgencias mantiene un compromiso permanente con una atención pediátrica segura, fundamentada e individualizada, procurando que las decisiones diagnósticas y terapéuticas respondan a la condición clínica particular de cada paciente.
+
+De igual manera, continuaremos fortaleciendo la comunicación entre los profesionales, los pacientes y sus familias, promoviendo explicaciones claras respecto de los estudios solicitados, las hipótesis diagnósticas consideradas y las decisiones adoptadas durante la atención. Estas materias forman parte de las acciones permanentes de supervisión, reflexión clínica y mejora de nuestras prácticas asistenciales.
+
+Agradecemos su observación, cuya retroalimentación consideramos muy valiosa para la mejora continua de nuestro servicio. Lamentamos que la experiencia no haya cumplido sus expectativas y nos comprometemos a seguir fortaleciendo una atención centrada en el respeto, la seguridad y la dignidad de nuestros pacientes.`;
+
+function armar() {
+  if (!$('reclamo').value.trim()) { msg('Falta el texto del reclamo.', 'err'); return null; }
+  const informe = $('informe').value.trim();
+  const extra = $('extra').value.trim();
+
+  const partes = [
+    'RECLAMO (extrae de aquí el nombre del reclamante y la fecha; mejora la redacción del resumen sin perder ningún elemento del contexto):\n' + $('reclamo').value.trim(),
+    'DAU Y REGISTROS CLÍNICOS:\n' + ($('dau').value.trim() || 'no se dispone de DAU'),
+    informe ? 'INFORME DEL PROFESIONAL INVOLUCRADO:\n' + informe
+            : 'INFORME DEL PROFESIONAL INVOLUCRADO: no se entregó. Omite esa sección completa y renumera las siguientes.',
+    'ANTECEDENTES ADICIONALES:\n' + (extra || 'sin antecedentes adicionales')
+  ];
+
+  const caso = 'Redacta la respuesta institucional al siguiente reclamo:\n\n' + partes.join('\n\n');
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + caso +
+    '\n\n---\n\nCONOCIMIENTOS Y EJEMPLOS DE REFERENCIA (usa el estilo, la extensión y el tono; no copies su contenido):\n\n' +
+    $('conocTxt').value.trim();
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+async function copiarYAbrir() {
+  const t = armar(); if (!t) return;
+  await copiar(t);
+  msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+  window.location.href = $('destino').value;
+}
+
+async function soloCopiar() {
+  const t = armar(); if (!t) return;
+  await copiar(t);
+  msg('Copiado al portapapeles.', 'ok');
+}
+
+function ver() {
+  const t = armar(); if (!t) return;
+  $('vista').textContent = t;
+  $('vista').style.display = 'block';
+  msg('Vista previa del texto a pegar.', 'ok');
+}
+
+$('instrTxt').value = get(INSTR_KEY) || INSTRUCCIONES;
+$('conocTxt').value = get(CONOC_KEY) || EJEMPLO;
+
+$('guardarInstr').addEventListener('click', () => { set(INSTR_KEY, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('guardarConoc').addEventListener('click', () => { set(CONOC_KEY, $('conocTxt').value); msg('Conocimientos guardados.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(INSTR_KEY); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+$('restaurarConoc').addEventListener('click', () => { borrar(CONOC_KEY); $('conocTxt').value = EJEMPLO; msg('Conocimientos restaurados.', 'ok'); });
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, e => { e.preventDefault(); copiarYAbrir(); }, { passive:false });
+  $('soloCopiar').addEventListener(ev, e => { e.preventDefault(); soloCopiar(); }, { passive:false });
+  $('ver').addEventListener(ev, e => { e.preventDefault(); ver(); }, { passive:false });
+});
+</script>
+</body>
+</html>
