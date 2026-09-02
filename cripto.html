@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-cripto-180.png">
+<link rel="icon" href="icon-cripto.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cripto">
+<meta name="theme-color" content="#123a63">
+<title>Trader cripto</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .nota { margin-top:10px; font-size:12.5px; color:#5a6a7c; line-height:1.5; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Trader cripto</h1>
+<p class="sub">Análisis del día, hoja educativa o revisión de una operación. Sin API, sin costo por token.</p>
+
+<p class="nota" id="hoy"></p>
+
+<label>Qué necesitas hoy</label>
+<select id="modo">
+  <option value="dia">Análisis y plan de acción de hoy</option>
+  <option value="edu">Hoja educativa: enséñame un concepto</option>
+  <option value="revisar">Revisar una operación que estoy pensando</option>
+</select>
+
+<label>Capital disponible hoy</label>
+<input type="text" id="capital" value="100.000 a 150.000 CLP">
+
+<label>Qué tienes ahora en cartera <span style="font-weight:400">(opcional)</span></label>
+<textarea id="cartera" style="min-height:70px" placeholder="Ej: 0,0008 BTC comprado a 95.000 USD, 200 USDT, nada más"></textarea>
+
+<label id="lblExtra">Lo que quieres preguntar <span style="font-weight:400">(opcional)</span></label>
+<textarea id="extra" style="min-height:70px" placeholder="Ej: ¿entro ahora o espero? ¿qué es el funding rate?"></textarea>
+
+<div class="chk"><input type="checkbox" id="altcoin" checked><label for="altcoin" style="margin:0; font-weight:400">Recomendar una altcoin, con fundamento</label></div>
+<div class="chk"><input type="checkbox" id="fuera" checked><label for="fuera" style="margin:0; font-weight:400">Incluir un consejo fuera del marco que definí</label></div>
+
+<p class="nota">Aquí escribes montos, no claves. Nunca pongas tu contraseña de Binance, el código 2FA ni la frase de recuperación: este texto se va al chat de IA que elijas.</p>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones para la IA</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_cri_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const METODO = `Antes de escribir, trabaja el caso por dentro con los seis sombreros y con estos cinco pasos: entender cuál es la pregunta real, analizar los factores en juego, razonar cómo se conectan, sintetizar lo relevante y concluir. No rotules nada de esto en la respuesta.`;
+
+// La fecha la pone la app: un modelo no sabe qué día es hoy y de eso depende media respuesta.
+const HOY = new Date();
+const fechaLarga = () => HOY.toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+const val = (id, et) => { const v = $(id).value.trim(); return v ? et + ': ' + v : ''; };
+
+const COMUN = `Actúa como analista financiero y educador de criptoactivos para un principiante. Tu interlocutor vive en Chile, opera en Binance con compras P2P, es nuevo, tiene dificultades de concentración y aprendizaje, y no puede estar pendiente del mercado. Escribe para que tenga que razonar lo mínimo: conclusiones primero, explicación después, frases cortas.
+
+BÚSQUEDA WEB: OBLIGATORIA
+Sin precios de hoy, todo lo demás es adivinanza. Si dispones de búsqueda web, úsala siempre en esta consulta y trae precio actual de BTC y ETH, el índice de miedo y codicia, y las noticias macro del día.
+Si no tienes búsqueda disponible, dilo en la primera línea y no des precios, niveles ni señales de entrada. Da solo la parte educativa. Un nivel de soporte inventado es una pérdida de dinero real.
+
+LO QUE NO PUEDES HACER, Y DEBES DECIRLO
+1. Nadie puede predecir el precio. Ni tú. No prometas ganancias, no des probabilidades de acierto que no puedes calcular, no digas "esta operación es segura".
+2. Cuando des un nivel, di de dónde sale y con qué frecuencia falla.
+3. Si el análisis técnico y el fundamental apuntan a lados distintos, dilo en vez de forzar una conclusión.
+4. Menciona siempre lo que se puede perder, no solo lo que se puede ganar, y en pesos.
+
+LO QUE CASI NADIE LE DICE A ALGUIEN QUE PARTE CON ESTE CAPITAL, Y TÚ SÍ DEBES DECIR
+- Los costos se comen las ganancias chicas. Spread del P2P, comisión de Binance al comprar y al vender, y diferencia de precio entre comprar y vender USDT en Chile. Sobre 100.000 pesos, un ida y vuelta puede costar varios miles: calcula ese costo explícitamente y dilo antes de proponer cualquier operación de corto plazo.
+- Operar seguido con este capital pierde casi siempre contra comprar y sostener. Dilo cuando corresponda, aunque la pregunta sea sobre entradas y salidas.
+- En Chile las ganancias por venta de criptomonedas tributan y hay que declararlas al SII. Recuérdalo cuando se hable de tomar utilidades.
+- "Ganancias consistentes diarias" no es un objetivo alcanzable en este mercado. No lo prometas ni lo insinúes. Lo alcanzable es un plan sostenible que no lo obligue a mirar la pantalla.
+
+` + METODO;
+
+const INSTR_DIA = COMUN + `
+
+FORMATO DE HOY, EN ESTE ORDEN
+1. EN UNA LÍNEA: comprar, vender, esperar o hacer DCA. La decisión primero.
+2. Precio actual de BTC y ETH, y cuánto se movieron en el día y en la semana.
+3. Macro y sentimiento: tasas, inflación, correlación con bolsa y oro, índice de miedo y codicia, flujos de ETF. Tres o cuatro líneas, en lenguaje simple.
+4. Ballenas y on-chain: entradas y salidas de exchanges, acumulación o distribución, funding rates y apalancamiento. Solo lo que cambie la decisión de hoy.
+5. Técnico, en tres horizontes: diario, semanal y mensual. Tendencia, soportes y resistencias con números, medias móviles (EMA 20, 50, 200), RSI y MACD, volumen y niveles de Fibonacci si aportan. Cada término técnico se explica entre paréntesis la primera vez que aparece.
+6. Fundamentales cripto del día: regulación, adopción, actualizaciones de red.
+7. PLAN DE ACCIÓN CONCRETO para el capital disponible: cuánto en qué, a qué precio entrar, dónde poner el stop, dónde tomar ganancia. En pesos chilenos, no en porcentajes abstractos.
+8. Costo de esa operación: comisiones y spread, en pesos. Y cuánto se puede perder si sale mal.
+9. Qué mirar mañana para saber si el plan sigue en pie.
+
+El formato debe ser el mismo todos los días, para que se lea rápido y se compare con el de ayer.
+
+`;
+
+const INSTR_EDU = COMUN + `
+
+FORMATO DE LA HOJA EDUCATIVA
+Explica el concepto pedido como se lo explicarías a alguien que no puede sostener la atención mucho rato:
+1. Qué es, en dos líneas y sin jerga.
+2. Para qué sirve en la práctica y cuándo se mira.
+3. Un ejemplo con números reales de hoy.
+4. Cómo se ve en la pantalla de Binance o de TradingView: dónde está y qué botón se toca.
+5. Los tres errores típicos con esa herramienta.
+6. Cuándo falla y por qué. Esto es lo importante: todo indicador falla, y saber cuándo es más útil que saber usarlo.
+7. Una regla de bolsillo para recordarlo.
+
+Sin precios inventados: si necesitas un ejemplo con números y no tienes datos de hoy, di que el ejemplo es ilustrativo.
+
+`;
+
+const INSTR_REV = COMUN + `
+
+FORMATO PARA REVISAR UNA OPERACIÓN
+1. VEREDICTO EN UNA LÍNEA: tiene sentido, tiene sentido con ajustes, o no la haría. Sin rodeos.
+2. Qué está bien pensado en la idea.
+3. Qué está mal o falta: nivel de entrada, tamaño de la posición, stop, plazo, correlación con lo que ya tiene.
+4. Cuánto se puede perder, en pesos, si sale mal. Y cuánto se gana si sale bien. La relación entre ambos.
+5. Cuánto cuesta entrar y salir: comisiones y spread, en pesos.
+6. Qué tendría que pasar para que la idea quede invalidada. El punto de salida se define antes de entrar, no después.
+7. La alternativa más simple que consigue algo parecido con menos trabajo y menos riesgo.
+
+`;
+
+const NOTAS = {
+  dia: 'Macro, ballenas, técnico y un plan concreto en pesos.',
+  edu: 'Un concepto explicado a fondo, con sus errores típicos y cuándo falla.',
+  revisar: 'Le pasas tu idea y te dice qué está mal antes de que la ejecutes.'
+};
+
+function instrDefault() {
+  const m = $('modo').value;
+  return m === 'edu' ? INSTR_EDU : (m === 'revisar' ? INSTR_REV : INSTR_DIA);
+}
+
+function pintarModo() {
+  const m = $('modo').value;
+  $('lblExtra').innerHTML = (m === 'edu' ? 'Qué concepto quieres entender' :
+    (m === 'revisar' ? 'La operación que estás pensando' : 'Lo que quieres preguntar')) +
+    ' <span style="font-weight:400">(opcional)</span>';
+  $('instrTxt').value = get(K.instr) || instrDefault();
+}
+
+function armar() {
+  const m = $('modo').value;
+  if (m === 'revisar' && $('extra').value.trim().length < 6) { msg('Describe la operación que quieres revisar.', 'err'); return ''; }
+  if (m === 'edu' && $('extra').value.trim().length < 3) { msg('Dime qué concepto quieres entender.', 'err'); return ''; }
+
+  const campos = [
+    'FECHA DE HOY: ' + fechaLarga() + '. Es el día real: úsalo y no lo recalcules.',
+    'PERFIL: vivo en Chile, opero en Binance con compras P2P. Soy principiante. Me cuesta concentrarme y no puedo estar mirando el mercado. Me interesan BTC, ETH y USDT.',
+    'CAPITAL DISPONIBLE HOY: ' + ($('capital').value.trim() || '100.000 a 150.000 CLP'),
+    val('cartera', 'CARTERA ACTUAL'),
+    val('extra', m === 'edu' ? 'CONCEPTO A EXPLICAR' : (m === 'revisar' ? 'OPERACIÓN A REVISAR' : 'MI PREGUNTA')),
+    $('altcoin').checked ? 'RECOMIÉNDAME UNA ALTCOIN, una sola, con fundamento técnico y fundamental, y con el riesgo dicho en la misma frase. Si hoy no hay ninguna que recomendarías con convicción, dilo: "ninguna" es una respuesta válida y mejor que rellenar.' : '',
+    $('fuera').checked ? 'AL FINAL, UN CONSEJO FUERA DE MI MARCO: algo que yo no te pregunté, que se salga de las reglas que te di, y que a tu juicio me convenga más que lo que estoy haciendo. Sé franco aunque contradiga lo que quiero oír.' : ''
+  ].filter(Boolean);
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + campos.join('\n\n');
+}
+
+$('hoy').textContent = 'Hoy es ' + fechaLarga() + '.';
+pintarModo();
+$('modo').addEventListener('change', pintarModo);
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+$('instrTxt').value = get(K.instr) || instrDefault();
+
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = instrDefault(); msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+
+
+</script>
+</body>
+</html>

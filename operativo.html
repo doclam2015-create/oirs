@@ -42,8 +42,48 @@
 <body>
 
 <h1>Operativo de urgencia</h1>
-<p class="sub">Arma las instrucciones exactas para actualizar las tres planillas. Sin API, sin costo por token.</p>
+<p class="sub">Registra un evento del mes, o crea y modifica las planillas. Sin API, sin costo por token.</p>
 
+<label>Qué vas a hacer</label>
+<select id="modo">
+  <option value="evento">Registrar un evento del mes</option>
+  <option value="planilla">Crear o modificar una planilla</option>
+</select>
+
+<div id="bloquePlanilla" style="display:none">
+  <label>Archivo</label>
+  <select id="archivo">
+    <option>Calendario de turnos médicos</option>
+    <option>Gestión de horas médicas contratadas</option>
+    <option>Registro de horas extraordinarias</option>
+    <option>Los tres archivos</option>
+  </select>
+
+  <label>Qué necesitas</label>
+  <select id="tarea">
+    <option>Crear la planilla desde cero</option>
+    <option>Modificar el formato existente</option>
+    <option>Agregar una columna, una fórmula o un cálculo</option>
+    <option>Adaptar la planilla a otro periodo o a otro servicio</option>
+    <option>Corregir un error de fórmula o de formato</option>
+    <option>Automatizar algo que hago a mano</option>
+  </select>
+
+  <label>Describe lo que necesitas</label>
+  <textarea id="descPlanilla" placeholder="Qué columnas tiene hoy, qué le falta, qué quieres que calcule solo"></textarea>
+
+  <label>Dónde la trabajas</label>
+  <select id="plataforma">
+    <option>Excel</option>
+    <option>Google Sheets</option>
+    <option>Las dos: tiene que funcionar en ambas</option>
+  </select>
+
+  <div class="chk"><input type="checkbox" id="adjunto"><label for="adjunto" style="margin:0; font-weight:400">Voy a adjuntar el archivo en el chat</label></div>
+  <p class="nota">Esta app copia texto: el archivo lo adjuntas tú en el chat después de pegar.</p>
+</div>
+
+<div id="bloqueEvento">
 <label>Tipo de evento</label>
 <select id="evento">
   <option value="cambio">Cambio de turno</option>
@@ -105,6 +145,7 @@
 <div class="chk"><input type="checkbox" id="resumen"><label for="resumen" style="margin:0; font-weight:400">Pedir además el resumen mensual por médico</label></div>
 
 <div id="calculo"></div>
+</div>
 
 <button id="copiar">Copiar y abrir el chat</button>
 <button id="soloCopiar" class="sec">Solo copiar</button>
@@ -176,6 +217,31 @@ function opciones(sel) {
 
 function esCambio() { return $('evento').value === 'cambio'; }
 
+function instrDefault() { return $('modo').value === 'planilla' ? INSTR_PLANILLA : INSTR; }
+function claveInstr() { return $('modo').value === 'planilla' ? 'doclam_ope_planilla' : K.instr; }
+
+function pintarModo() {
+  const pl = $('modo').value === 'planilla';
+  $('bloquePlanilla').style.display = pl ? 'block' : 'none';
+  $('bloqueEvento').style.display = pl ? 'none' : 'block';
+  $('instrTxt').value = get(claveInstr()) || instrDefault();
+}
+
+function armarPlanilla() {
+  const d = $('descPlanilla').value.trim();
+  if (d.length < 8) { msg('Describe lo que necesitas.', 'err'); return ''; }
+  const campos = [
+    'ARCHIVO: ' + $('archivo').value,
+    'TAREA: ' + $('tarea').value,
+    'DESCRIPCIÓN: ' + d,
+    'PLATAFORMA: ' + $('plataforma').value,
+    $('adjunto').checked
+      ? 'ADJUNTO EL ARCHIVO en este mismo mensaje: léelo antes de responder y conserva su formato.'
+      : 'NO adjunto archivo. Si necesitas ver el original para no romper el formato, pídemelo antes de escribir la solución.'
+  ];
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + campos.join('\n\n');
+}
+
 function pintar() {
   const e = $('evento').value, c = esCambio();
   $('bloque2').style.visibility = c ? 'visible' : 'hidden';
@@ -216,6 +282,35 @@ function calcular() {
   return { ev, a, b, h, tipo, val, total, e };
 }
 
+const INSTR_PLANILLA = `Actúa como médico coordinador operativo de un servicio de urgencias y, a la vez, como experto en planillas de cálculo. Dominas Excel y Google Sheets, en escritorio, web y móvil. Tu interlocutor dirige el servicio: habla de par a par, sin preámbulos.
+
+LAS TRES PLANILLAS DEL SERVICIO
+ARCHIVO 1 — Calendario de turnos. Una hoja por mes. Cada día tiene cuatro turnos: diurno adultos, diurno pediátricos, nocturno adultos, nocturno pediátricos. Cada fila lleva número de día y día de la semana.
+ARCHIVO 2 — Gestión de horas médicas contratadas y reemplazos. Columnas: motivo, médico que reemplaza, número de horas, tipo de contrato, monto por hora, monto total.
+ARCHIVO 3 — Registro de horas extraordinarias. Columnas: fecha del evento, médico que asume el turno, motivo.
+
+REGLAS DE COLOR DEL ARCHIVO 1, QUE NO SE TOCAN
+Cambio de turno: morado claro. Feriado legal: amarillo. Licencia médica: naranja. Ningún otro color.
+
+CÓMO DEBES TRABAJAR
+1. Respeta el formato original. Si te entrego un archivo, conserva su estructura, sus encabezados y sus colores: modifica solo lo que te pido. No "ordenes" ni "mejores" columnas que no mencioné.
+2. Si tienes ejecución de código, genera el archivo listo para descargar, en el formato que te indico. Si no la tienes, dilo en la primera línea y entrega en su lugar: la estructura celda por celda, las fórmulas listas para copiar, y los pasos exactos para armarla.
+3. Las fórmulas van completas y probadas mentalmente, con la referencia real de las celdas. Advierte del separador de argumentos: coma o punto y coma según la configuración regional, porque en Chile suele ser punto y coma y una fórmula copiada de internet no corre.
+4. Si algo funciona distinto en Excel y en Google Sheets, dilo en una tabla corta. No des por sentado que la fórmula es la misma.
+5. Escalable y reutilizable: la planilla debe servir para el mes siguiente y para otro servicio cambiando datos, no fórmulas. Usa rangos con nombre, listas desplegables para los apellidos y los motivos, y formato condicional en vez de colores pintados a mano. Explica por qué en una línea.
+6. Antes de escribir, dime en dos líneas qué entendiste que hay que hacer. Si algo es ambiguo, pregúntalo en vez de suponerlo: rehacer una planilla mal entendida cuesta más que preguntar.
+
+NO INVENTES
+No inventes columnas, apellidos, valores por hora ni datos que no te entregué. Si falta un dato, escribe "falta: [qué]" y sigue con el resto.
+No cambies las reglas de color ni agregues colores nuevos.
+
+VALORES VIGENTES
+Turno completo: 12 horas. Hora con contrato: $51.724. Hora a honorarios: $28.000.
+Médicos con contrato: Suárez, Pastas, Ramírez, Rivera, Morales, Veliz, Navarro, Bastardo, Polanco, Nieves, Zeballos, Ocampo.
+Médicos a honorarios: Helms, Carvajal, Rondón, Cortes.
+
+Analiza con el método de los seis sombreros, pero por dentro: no rotules las secciones con los colores ni con los pasos del razonamiento.`;
+
 const INSTR = `Actúa como médico coordinador operativo de un servicio de urgencias y, a la vez, como analista de planillas. Tu interlocutor dirige el servicio: habla de par a par, sin preámbulos y sin explicar lo obvio.
 
 Trabajas sobre tres planillas Excel:
@@ -255,6 +350,7 @@ REGLAS DURAS
 Analiza el caso con el método de los seis sombreros, pero por dentro: no rotules las secciones con los colores ni con los pasos del razonamiento. Lo único del método que aparece explícito es el sombrero negro, en forma de la lista de verificación final.`;
 
 function armar() {
+  if ($('modo').value === 'planilla') return armarPlanilla();
   const f1 = $('fecha1').value.trim();
   if (!f1) { msg('Falta la fecha del turno.', 'err'); return ''; }
   const c = esCambio();
@@ -333,17 +429,18 @@ async function copiar(texto) {
 
 opciones($('medA')); opciones($('medB'));
 $('medB').selectedIndex = 1;
-$('instrTxt').value = get(K.instr) || INSTR;
 $('destino').value = get(K.dest) || 'https://chatgpt.com/';
 pintar();
+pintarModo();
 
+$('modo').addEventListener('change', pintarModo);
 ['evento'].forEach(id => $(id).addEventListener('change', pintar));
 ['medA','medB','turno1','turno2'].forEach(id => $(id).addEventListener('change', calcular));
 ['fecha1','fecha2','horas'].forEach(id => $(id).addEventListener('input', calcular));
 
 $('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
-$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
-$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTR; msg('Instrucciones restauradas.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(claveInstr(), $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(claveInstr()); $('instrTxt').value = instrDefault(); msg('Instrucciones restauradas.', 'ok'); });
 
 $('nativa').checked = get(K_NAT) === '1';
 pintarEsquema();
