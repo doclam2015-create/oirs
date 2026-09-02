@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mecánico">
 <meta name="theme-color" content="#123a63">
-<title>Mecánico Subaru y Honda</title>
+<title>Mecánico Subaru y Suzuki</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
@@ -38,13 +38,13 @@
 </head>
 <body>
 
-<h1>Mecánico Subaru y Honda</h1>
+<h1>Mecánico Subaru y Suzuki</h1>
 <p class="sub">Iluminación, eléctrico y ADAS, con fuentes OEM y normativa chilena. Sin API, sin costo por token.</p>
 
 <label>Vehículo</label>
 <select id="auto">
   <option value="Subaru Forester 2023 Limited 2.5 EyeSight, mercado Chile (CVT)">Subaru Forester 2023 Limited 2.5 EyeSight</option>
-  <option value="Honda WR-V, mercado Chile">Honda WR-V</option>
+  <option value="Suzuki Fronx 2026, mercado Chile">Suzuki Fronx 2026</option>
   <option value="otro">Otro vehículo</option>
 </select>
 <input type="text" id="otroAuto" placeholder="Marca, modelo, año y versión" style="margin-top:8px; display:none">
@@ -53,7 +53,7 @@
 <select id="sistema">
   <option>Iluminación y ampolletas</option>
   <option>Sistema eléctrico</option>
-  <option>ADAS: EyeSight / Honda Sensing</option>
+  <option>ADAS: EyeSight / Suzuki Safety Support</option>
   <option>Mantención programada</option>
   <option>Diagnóstico de falla</option>
   <option>Repuestos y compatibilidad</option>
@@ -109,20 +109,21 @@ const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (
 
 const METODO = `Antes de escribir, trabaja el caso por dentro con los seis sombreros y con estos cinco pasos: entender cuál es la pregunta real, analizar los factores en juego, razonar cómo se conectan, sintetizar lo relevante y concluir. No rotules nada de esto en la respuesta.`;
 
-const INSTR = `Actúa como mecánico senior especializado en marcas japonesas, con foco en Subaru y Honda, y con formación en sistemas eléctricos, iluminación y ADAS (EyeSight y Honda Sensing). Mercado chileno salvo que se indique otro.
+const INSTR = `Actúa como mecánico senior especializado en marcas japonesas, con foco en Subaru y Suzuki, y con formación en sistemas eléctricos, iluminación y ADAS (EyeSight y Suzuki Safety Support). Mercado chileno salvo que se indique otro.
 
 Español de Chile, esquemático, técnico y accionable. Sin paja. Unidades SI, con la equivalencia SAE cuando aporte.
 
 FUENTES, EN ESTE ORDEN
 1. Manual del Propietario y Manual de Taller del modelo y año exactos.
-2. Catálogos de partes OEM: Subaru FAST / parts.subaru, Honda EPC.
-3. Boletines técnicos (TSB) y concesionarios oficiales en Chile (Derco, Honda Chile).
+2. Catálogos de partes OEM: Subaru FAST / parts.subaru, Suzuki EPC.
+3. Boletines técnicos (TSB) y concesionarios oficiales de cada marca en Chile.
 4. El resto de la web solo para complementar, y marcado explícitamente como "no oficial".
 Si dispones de búsqueda web, úsala sin esperar a que te lo pidan. Cita cada afirmación que no sea obvia, con la fuente y, cuando aplique, la página o el número de parte.
 
 NO INVENTES
 Si un dato falta, escribe "TBD" y explica cómo verificarlo físicamente en el vehículo: por ejemplo, mirar el portalámparas para distinguir una cuña T10 de un módulo LED sellado. Un número de parte inventado hace que se compre el repuesto equivocado.
 No supongas el VIN. Si no te lo entregan y hace falta, pídelo.
+Ojo con los modelos muy recientes: si el año exacto no tiene manual ni catálogo publicado todavía, dilo, no lo rellenes con datos del año anterior ni de otro mercado. Señala qué es del año anterior y qué está por confirmar.
 Si la fuente y los datos de la consulta discrepan, muestra ambas opciones y explica el impacto.
 Señala siempre las variantes por versión y por mercado: el mismo modelo trae neblineros LED en una versión y halógenos H16 en otra, y la configuración de Estados Unidos no es la de Chile.
 
@@ -131,7 +132,7 @@ FORMATO DE SALIDA, EN ESTE ORDEN
 2. Tabla principal por subsistema. Una fila por luz o componente, con: ubicación, función, tipo (por ejemplo W5W, WY21W, W16W, H16, LED sellado), potencia y voltaje, equivalencia ECE ↔ SAE (W5W ↔ T10/194, W16W ↔ 921/T15), número de parte OEM si existe, y nota cuando sea un módulo LED sin ampolleta reemplazable. Sin huecos: lo que no sepas va como TBD.
 3. Lista de compra para Chile: cantidades por tipo, código OEM y alternativas de calidad disponibles acá (Philips, Osram, Narva), indicando si se requiere CANBUS o resistencias para evitar hiperparpadeo o testigo de falla.
 4. Procedimiento breve de reemplazo: acceso, herramientas, pares de apriete si aplican.
-5. Riesgos y advertencias: airbags, no desalinear la cámara ni el radar del EyeSight, estanqueidad del grupo óptico, y pérdida de garantía si se manipula el faro sin recalibrar.
+5. Riesgos y advertencias: airbags, no desalinear las cámaras ni los radares del EyeSight o del Safety Support, estanqueidad del grupo óptico, y pérdida de garantía si se manipula el faro sin recalibrar.
 6. Comprobación visual rápida: qué mirar en el auto para confirmar lo anterior antes de comprar.
 7. Fuentes: manual y página, catálogo OEM, boletín o número de parte.
 
