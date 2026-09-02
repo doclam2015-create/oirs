@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-veterinario-180.png">
+<link rel="icon" href="icon-veterinario.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Veterinario">
+<meta name="theme-color" content="#123a63">
+<title>Veterinario de perros</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .nota { margin-top:10px; font-size:12.5px; color:#5a6a7c; line-height:1.5; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Veterinario de perros</h1>
+<p class="sub">Arma la consulta completa para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Qué me traes</label>
+<select id="modo">
+  <option value="sintomas">Síntomas, sin diagnóstico todavía</option>
+  <option value="dx">Diagnóstico ya confirmado por veterinario</option>
+</select>
+<p class="nota" id="notaModo"></p>
+
+<label id="lblCaso">Síntomas, lo más concreto posible</label>
+<textarea id="caso" placeholder="Qué le pasa, desde cuándo, si va a peor, si come y bebe, orina y deposiciones, ánimo"></textarea>
+
+<div class="fila">
+  <div><label>Raza</label><input type="text" id="raza" placeholder="Ej: labrador, quiltro"></div>
+  <div><label>Edad</label><input type="text" id="edad" placeholder="Ej: 7 años"></div>
+</div>
+<div class="fila">
+  <div><label>Peso</label><input type="text" id="peso" placeholder="Ej: 24 kg"></div>
+  <div><label>Sexo</label>
+    <select id="sexo">
+      <option value="">Sin especificar</option>
+      <option>Macho entero</option><option>Macho castrado</option>
+      <option>Hembra entera</option><option>Hembra esterilizada</option>
+    </select>
+  </div>
+</div>
+
+<label>Tiempo de evolución</label>
+<input type="text" id="evol" placeholder="Ej: 3 días, empeorando desde ayer">
+
+<label>Alimentación</label>
+<input type="text" id="comida" placeholder="Ej: pellet adulto, restos de comida casera">
+
+<label>Vacunas y desparasitación</label>
+<input type="text" id="vacunas" placeholder="Ej: al día, última en marzo. O: no sé">
+
+<label>Antecedentes y medicamentos que recibe</label>
+<textarea id="antec" style="min-height:70px" placeholder="Enfermedades previas, cirugías, remedios actuales"></textarea>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones para la IA</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_vet_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const METODO = `Antes de escribir, trabaja el caso por dentro con los seis sombreros y con estos cinco pasos: entender cuál es la pregunta real, analizar los factores en juego, razonar cómo se conectan, sintetizar lo relevante y concluir. No rotules nada de esto en la respuesta: el lector ve el resultado, no el método.`;
+
+const INSTR_SINT = `Actúa como médico veterinario con amplia experiencia clínica en perros, de todas las razas y edades. Tu interlocutor es el dueño del perro, no un colega: lenguaje simple, y si usas un término técnico lo explicas entre paréntesis la primera vez.
+
+Formato esquemático: títulos numerados, viñetas cortas, sin párrafos largos y sin relleno.
+
+REGLAS QUE NO SE NEGOCIAN
+1. No indiques dosis. Ni miligramos, ni mililitros, ni frecuencias exactas: eso lo ajusta el veterinario presencial. Sí explicas para qué sirve cada medicamento, cómo actúa, por qué se indica y qué precauciones tiene.
+2. Lo urgente va primero. Si lo descrito puede ser una emergencia, dilo en la primera línea, antes de todo lo demás, y di que hay que ir ahora, no mañana.
+3. Advierte de lo que es peligroso dar por cuenta propia. El paracetamol y el ibuprofeno son tóxicos para el perro: dilo cuando venga al caso.
+4. No inventes. Si falta un dato que cambia el diagnóstico, pregúntalo antes de responder en vez de suponerlo.
+5. Esto es orientación general y no reemplaza la consulta presencial. Dilo una vez, al final, en una línea.
+
+RESPONDE CON ESTE ESQUEMA, EN ESTE ORDEN
+1. Hipótesis diagnósticas principales, de la más probable a la menos, y en una línea por qué cada una encaja con lo descrito.
+2. Exámenes útiles para confirmar: cuáles, para qué sirve cada uno y si de verdad hacen falta o se puede esperar.
+3. Tratamiento general para cada hipótesis.
+4. Cuidados en casa y medidas no farmacológicas.
+5. Medicamentos explicados: cómo actúan, por qué se dan, precauciones. Sin dosis.
+6. Evolución esperada, con tiempos aproximados.
+7. En qué fijarse día a día para saber si mejora o empeora. Lista concreta de señales.
+8. Pronóstico.
+
+` + METODO;
+
+const INSTR_DX = `Actúa como médico veterinario con amplia experiencia clínica en perros. Tu interlocutor es el dueño del perro: lenguaje simple, y si usas un término técnico lo explicas entre paréntesis la primera vez.
+
+Formato esquemático: títulos numerados, viñetas cortas, sin relleno.
+
+REGLAS QUE NO SE NEGOCIAN
+1. No indiques dosis. Explicas qué hace cada medicamento y por qué se indica, no cuánto.
+2. Si algo de lo descrito sugiere una descompensación urgente, dilo en la primera línea.
+3. No contradigas el diagnóstico del veterinario tratante. Si algo no calza con lo que describen, dilo como pregunta a plantearle en la próxima consulta, no como corrección.
+4. Advierte de lo que es peligroso dar por cuenta propia. El paracetamol y el ibuprofeno son tóxicos para el perro.
+5. Esto es orientación general y no reemplaza la consulta presencial. Una línea, al final.
+
+RESPONDE CON ESTE ESQUEMA, EN ESTE ORDEN
+1. Qué es la enfermedad, explicado breve y claro.
+2. Tratamiento y manejo recomendados.
+3. Medicamentos explicados: cómo actúan y por qué se indican. Sin dosis.
+4. Medidas adicionales: alimentación, cuidados, ambiente, ejercicio.
+5. Evolución esperada, con tiempos.
+6. Señales de buena evolución y señales de mala evolución, en dos listas separadas.
+7. Pronóstico.
+
+` + METODO;
+
+const NOTAS = {
+  sintomas: 'Diferenciales, exámenes, tratamiento y en qué fijarte día a día.',
+  dx: 'Qué es la enfermedad, cómo se maneja y cómo saber si va bien.'
+};
+
+function instrDefault() { return $('modo').value === 'dx' ? INSTR_DX : INSTR_SINT; }
+
+function pintarModo() {
+  const dx = $('modo').value === 'dx';
+  $('notaModo').textContent = NOTAS[$('modo').value];
+  $('lblCaso').textContent = dx ? 'Diagnóstico confirmado y lo que te dijo el veterinario' : 'Síntomas, lo más concreto posible';
+  $('caso').placeholder = dx
+    ? 'Ej: insuficiencia renal crónica etapa 2, diagnosticada la semana pasada con exámenes de sangre'
+    : 'Qué le pasa, desde cuándo, si va a peor, si come y bebe, orina y deposiciones, ánimo';
+  $('instrTxt').value = get(K.instr) || instrDefault();
+}
+
+function armar() {
+  const c = $('caso').value.trim();
+  if (c.length < 8) { msg('Describe el caso.', 'err'); return ''; }
+  const dx = $('modo').value === 'dx';
+  const campos = [
+    (dx ? 'DIAGNÓSTICO CONFIRMADO: ' : 'SÍNTOMAS: ') + c,
+    val('raza', 'RAZA'), val('edad', 'EDAD'), val('peso', 'PESO'),
+    $('sexo').value ? 'SEXO: ' + $('sexo').value : '',
+    val('evol', 'TIEMPO DE EVOLUCIÓN'), val('comida', 'ALIMENTACIÓN'),
+    val('vacunas', 'VACUNAS Y DESPARASITACIÓN'), val('antec', 'ANTECEDENTES Y MEDICAMENTOS')
+  ].filter(Boolean);
+  campos.push('Si con esto no te alcanza para responder bien, pregúntame lo que falte antes de contestar.');
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + campos.join('\n\n');
+}
+
+const val = (id, et) => { const v = $(id).value.trim(); return v ? et + ': ' + v : ''; };
+
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+$('instrTxt').value = get(K.instr) || instrDefault();
+pintarModo();
+$('modo').addEventListener('change', pintarModo);
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = instrDefault(); msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+
+</script>
+</body>
+</html>

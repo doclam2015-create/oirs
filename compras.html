@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-compras-180.png">
+<link rel="icon" href="icon-compras.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Compras">
+<meta name="theme-color" content="#123a63">
+<title>Comparador de precios</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .nota { margin-top:10px; font-size:12.5px; color:#5a6a7c; line-height:1.5; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Comparador de precios</h1>
+<p class="sub">Amazon, AliExpress y Mercado Libre, con el precio final puesto en Chile. Sin API, sin costo por token.</p>
+
+<label>Producto que buscas</label>
+<input type="text" id="producto" placeholder="Ej: disco SSD NVMe 2 TB, audífonos con cancelación de ruido">
+
+<label>Requisitos y especificaciones <span style="font-weight:400">(opcional)</span></label>
+<textarea id="specs" style="min-height:70px" placeholder="Marca, capacidad, compatibilidad, lo que sí o sí tiene que cumplir"></textarea>
+
+<label>Dónde buscar</label>
+<div class="chk"><input type="checkbox" id="pAmazon" checked><label for="pAmazon" style="margin:0; font-weight:400">Amazon</label></div>
+<div class="chk"><input type="checkbox" id="pAli" checked><label for="pAli" style="margin:0; font-weight:400">AliExpress</label></div>
+<div class="chk"><input type="checkbox" id="pML" checked><label for="pML" style="margin:0; font-weight:400">Mercado Libre Chile</label></div>
+
+<label>Presupuesto máximo <span style="font-weight:400">(opcional)</span></label>
+<input type="text" id="presu" placeholder="Ej: 120.000 CLP">
+
+<label>Qué te importa más</label>
+<select id="prioridad">
+  <option>El precio final más bajo, aunque demore</option>
+  <option>La entrega más rápida</option>
+  <option>Garantía y respaldo local</option>
+  <option>El equilibrio entre los tres</option>
+</select>
+
+<label>Comuna o ciudad de entrega <span style="font-weight:400">(opcional)</span></label>
+<input type="text" id="comuna" placeholder="Ej: Antofagasta">
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones para la IA</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_com_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const METODO = `Antes de escribir, trabaja el caso por dentro con los seis sombreros y con estos cinco pasos: entender cuál es la pregunta real, analizar los factores en juego, razonar cómo se conectan, sintetizar lo relevante y concluir. No rotules nada de esto en la respuesta.`;
+
+const INSTR = `Actúa como especialista en compras y comparación de productos en Amazon, AliExpress y Mercado Libre, con el comprador en Chile.
+
+BÚSQUEDA WEB: OBLIGATORIA
+Un precio de hace seis meses no sirve para comprar hoy. Si dispones de búsqueda web, úsala siempre en esta consulta, sin esperar a que te lo pidan, y trae precio, stock y reputación del vendedor de ahora.
+Si no tienes búsqueda disponible, dilo en la primera línea y no entregues precios: limítate a qué modelos buscar, qué especificaciones comparar y en qué fijarse. Un precio de memoria es un precio equivocado.
+
+CERO INVENCIÓN
+No inventes precios, vendedores, calificaciones, plazos de envío ni enlaces. Si de una plataforma no obtuviste datos, escribe: "No sé si hay oferta vigente para ese producto en esta plataforma." Es una respuesta correcta. Un vendedor inventado con 98 % de reputación es un fraude.
+Cada precio va con la fecha y hora en que lo verificaste, y con el enlace.
+
+EL PRECIO QUE IMPORTA ES EL PRECIO PUESTO EN CHILE
+Esto es lo que casi todas las comparaciones se saltan y es donde se pierde la plata:
+- Convierte a pesos chilenos e indica el tipo de cambio que usaste y su fecha.
+- Suma el envío internacional.
+- Suma el IVA de importación y, sobre los 41 dólares FOB, los derechos de aduana. Si la compra queda bajo el mínimo exento, dilo.
+- Suma el costo de la gestión del courier si aplica.
+Después de todo eso, compara. Un producto de AliExpress a la mitad de precio deja de serlo con impuestos y treinta días de espera, y eso hay que mostrarlo, no esconderlo.
+
+FORMATO DE SALIDA
+Empieza con una línea de resumen: cuántas ofertas encontraste y de qué calidad.
+
+Luego, por cada opción:
+🛍️ Plataforma
+📦 Vendedor y reputación (calificación y número de ventas; si el vendedor es nuevo o con pocas ventas, dilo)
+💲 Precio de lista, y precio final puesto en Chile con el desglose
+🚚 Envío: costo y plazo estimado real
+📦 Disponibilidad
+⚙️ Especificaciones que importan para lo que se pidió
+✅ Por qué esta opción destaca
+🔗 Enlace y fecha/hora de verificación
+
+Cierra con una tabla comparativa de precio final puesto en Chile, plazo y garantía, y una recomendación clara: cuál comprarías tú y por qué. Menciona también los riesgos: falsificaciones en la categoría, si el modelo tiene versiones regionales incompatibles, si la garantía no opera en Chile.
+
+Si en la categoría hay una trampa conocida (capacidades falsas en memorias, cargadores sin certificación, repuestos genéricos que no calzan), adviértelo aunque no te lo pregunten.
+
+` + METODO;
+
+function instrDefault() { return INSTR; }
+
+function armar() {
+  const p = $('producto').value.trim();
+  if (p.length < 3) { msg('Escribe qué producto buscas.', 'err'); return ''; }
+  const plat = [];
+  if ($('pAmazon').checked) plat.push('Amazon');
+  if ($('pAli').checked) plat.push('AliExpress');
+  if ($('pML').checked) plat.push('Mercado Libre Chile');
+  if (!plat.length) { msg('Elige al menos una plataforma.', 'err'); return ''; }
+
+  const campos = [
+    'PRODUCTO: ' + p,
+    val('specs', 'REQUISITOS'),
+    'PLATAFORMAS: ' + plat.join(', '),
+    val('presu', 'PRESUPUESTO MÁXIMO'),
+    'PRIORIDAD: ' + $('prioridad').value,
+    'ENTREGA EN: ' + ($('comuna').value.trim() || 'Chile, comuna sin especificar'),
+    'Verifica hoy. Si un dato no lo pudiste verificar, dilo en vez de estimarlo.'
+  ].filter(Boolean);
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + campos.join('\n\n');
+}
+
+const val = (id, et) => { const v = $(id).value.trim(); return v ? et + ': ' + v : ''; };
+
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+$('instrTxt').value = get(K.instr) || instrDefault();
+
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = instrDefault(); msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+
+</script>
+</body>
+</html>
