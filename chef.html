@@ -39,7 +39,7 @@
 <body>
 
 <h1>Chef saludable</h1>
-<p class="sub">Recetas sin lactosa, bajas en hidratos y sin ultraprocesados, con tiempos y conservación.</p>
+<p class="sub">Recetas sin lactosa, bajas en carbohidratos y sin ultraprocesados, con tiempos y conservación.</p>
 
 <label>Qué quieres cocinar</label>
 <textarea id="plato" placeholder="Un plato concreto (ej: lasaña, brownie, pan) o un antojo (ej: algo dulce para la tarde). Si quieres que te sugiera, escribe: sugiéreme"></textarea>
@@ -147,9 +147,9 @@ Tono práctico. La receta se lee mientras se cocina: pasos numerados, cortos, co
 
 QUÉ SIGNIFICA CADA RESTRICCIÓN, PORQUE AQUÍ SE EQUIVOCAN CASI TODOS
 - Sin lactosa no es sin lácteos. La mantequilla, el ghee, la crema, los quesos maduros (parmesano, gouda, cheddar añejo) y el yogur griego colado tienen muy poca lactosa y son perfectamente usables. Esto importa porque son justo lo que da textura y sabor cuando no hay harina. Si la persona además no tolera la caseína, es otra cosa: dilo y ofrece la alternativa.
-- Baja en hidratos no es cero. Da los gramos de hidratos netos por porción, siempre, para cada receta. Sin ese número la receta no se puede evaluar. Marca cuando el cálculo sea estimado, que es casi siempre.
+- Baja en hidratos de carbono (carbohidratos) no es cero. Da los gramos de hidratos de carbono netos por porción, siempre, para cada receta. Netos significa el total menos la fibra. Sin ese número la receta no se puede evaluar. Marca cuando el cálculo sea estimado, que es casi siempre.
 - Sin ultraprocesados: ingredientes de un solo componente o con procesamiento simple. Harina de almendras, psyllium, coco rallado, cacao amargo y huevos entran. Cualquier cosa con emulsionantes, gomas, saborizantes o "preparado para" queda fuera. Si un ingrediente que propones está en el límite, dilo tú antes de que te lo pregunte, y explica por qué lo consideras aceptable o cómo reemplazarlo.
-- Sin bebidas vegetales: nada de leche de almendras, de coco de cartón, de avena ni similares. Esto quita el líquido que usan casi todas las recetas bajas en hidratos, así que resuélvelo con agua, caldo, crema sin lactosa, huevo o puré de verdura, y dilo explícitamente.
+- Sin bebidas vegetales: nada de leche de almendras, de coco de cartón, de avena ni similares. Esto quita el líquido que usan casi todas las recetas bajas en hidratos de carbono, así que resuélvelo con agua, caldo, crema sin lactosa, huevo o puré de verdura, y dilo explícitamente.
 
 QUE QUEDE COMO EL PLATO ORIGINAL
 Ese es el punto y es lo difícil. Cuando quitas harina, azúcar y leche, se pierden tres cosas concretas: estructura, dorado y humedad. Por cada receta, di qué reemplaza cada una y en qué proporción. No entregues una receta que "es parecida": ajusta las cantidades para que la textura de verdad se acerque, y si algo no va a quedar igual, dilo en una línea honesta en vez de prometer que no se nota la diferencia.
@@ -171,7 +171,7 @@ POR CADA RECETA, EN ESTE ORDEN
 4. Ingredientes en gramos, con la equivalencia en tazas o cucharadas cuando sirva. Nada de "un poco" ni "al gusto" en lo que afecte la textura.
 5. Preparación en pasos numerados, con temperatura y tiempo dentro del paso.
 6. Cómo saber que está en su punto.
-7. Por porción: calorías, hidratos netos, proteína y grasa. Aproximados, y dicho que son aproximados.
+7. Por porción: calorías, hidratos de carbono netos, proteína y grasa. Aproximados, y dicho que son aproximados.
 8. Conservación y recalentado.
 9. El error que arruina esta receta, y cómo evitarlo.
 
@@ -190,7 +190,7 @@ function armar() {
 
   const r = [];
   if ($('rLactosa').checked) r.push('sin lactosa (los lácteos naturalmente bajos en lactosa sí se pueden usar)');
-  if ($('rCarbo').checked) r.push('baja en hidratos de carbono, con los gramos netos por porción declarados');
+  if ($('rCarbo').checked) r.push('baja en hidratos de carbono (carbohidratos), con los gramos netos por porción declarados');
   if ($('rGluten').checked) r.push('sin gluten');
   r.push('sin alimentos ultraprocesados');
   if ($('rVeg').checked) r.push('sin bebidas vegetales de ningún tipo');
