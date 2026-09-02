@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-banco-180.png">
+<link rel="icon" href="icon-banco.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Banco">
+<meta name="theme-color" content="#123a63">
+<title>Ejecutivo de cuentas · Chile</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .aviso { margin-top:14px; padding:10px 12px; border-radius:8px; background:#fff6e0; border:1px solid #e8d08a; font-size:13px; color:#6b4c05; line-height:1.45; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Ejecutivo de cuentas de confianza</h1>
+<p class="sub">Arma el texto completo —rol, método y tu situación— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Tu consulta</label>
+<textarea id="consulta" style="min-height:160px" placeholder="Escribe o dicta con tus palabras. Ej: tengo la tarjeta de crédito en 1,8 millones en rotativo y me ofrecen un crédito de consumo para pagarla. ¿Conviene?"></textarea>
+
+<label>Tema</label>
+<select id="tema">
+  <option>El que corresponda (que lo determine el análisis)</option>
+  <option>Deudas y créditos de consumo</option>
+  <option>Tarjetas de crédito y líneas</option>
+  <option>Ahorro y fondo de emergencia</option>
+  <option>Inversiones</option>
+  <option>Cuentas corrientes, comisiones y planes</option>
+  <option>Crédito hipotecario y compra de vivienda</option>
+  <option>Presupuesto mensual y flujo de caja</option>
+  <option>Previsión: APV, cuenta 2, jubilación</option>
+</select>
+
+<label>Bancos y productos que tienes o te ofrecen <span style="font-weight:400">(opcional)</span></label>
+<input type="text" id="bancos" placeholder="Ej: Banco de Chile cuenta corriente, Itaú hipotecario, tarjeta Tenpo">
+
+<label>Tu situación financiera <span style="font-weight:400">(opcional, pero cambia todo)</span></label>
+<textarea id="situacion" style="min-height:150px" placeholder="Ingreso líquido mensual, deudas con su monto y tasa, cuotas que pagas, ahorro disponible, gastos fijos. Sin RUT ni números de cuenta: solo montos y tasas."></textarea>
+
+<div class="chk"><input type="checkbox" id="calculo" checked><label for="calculo" style="margin:0; font-weight:400">Quiero los números: cálculo paso a paso y comparación de escenarios</label></div>
+
+<div class="aviso">No pegues tu RUT completo, números de cuenta o tarjeta, ni claves. Para el análisis bastan los montos, las tasas y los plazos. Lo que escribas viaja al chat de IA que elijas.</div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones (rol, método y formato)</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_bco_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const INSTRUCCIONES = `Actúa como un ejecutivo de cuentas senior de la banca chilena, con años de oficio en Banco de Chile, Itaú, Santander, BCI, Estado y en el mundo fintech (Tenpo, MACH, Mercado Pago). Conoces el producto por dentro: cómo se cobra, dónde está la letra chica y qué le conviene al banco.
+
+TU LEALTAD
+Con una diferencia decisiva respecto de un ejecutivo real: no ganas comisión. No tienes metas de colocación ni productos que empujar. Trabajas para mí, no para el banco. En la práctica esto significa:
+- Cuando un producto le conviene más al banco que a mí, dilo con esas palabras.
+- Cuando la mejor decisión es no contratar nada, dilo. "No hagas nada por ahora" es una recomendación válida y muchas veces la correcta.
+- Cuando lo que me ofrecieron en la sucursal o por teléfono es malo, dímelo derecho, aunque venga de mi propio banco.
+- Si estoy cometiendo un error caro, no lo suavices. Prefiero un diagnóstico incómodo hoy a una deuda cara por tres años.
+
+TRATO
+Cercano y directo, de tú, como quien me conoce hace años y no necesita venderme nada. Nada de "estimado cliente" ni de lenguaje de folleto. Sin tecnicismos innecesarios: si usas un término del rubro (CAE, UF, tasa máxima convencional, rotativo), explícalo en media línea la primera vez. Cálido, pero nunca complaciente: la calidez es en el trato, no en el diagnóstico.
+
+BÚSQUEDA WEB (hazlo antes de escribir)
+Si dispones de búsqueda web, úsala siempre en esta consulta, sin esperar a que te lo pidan. Las tasas, comisiones y topes cambian todos los meses. Verifica el valor del día de la UF y la UTM, la tasa máxima convencional vigente (la publica la CMF), y las tasas y comisiones reales del producto en el sitio del banco o en el comparador de la CMF (cmfchile.cl). Al final indica en una línea qué consultaste y con qué fecha.
+Si no tienes búsqueda, dilo en la primera línea ("respondo sin acceso a datos en línea: confirma tasas y valores antes de decidir") y trabaja con rangos, nunca con cifras falsamente precisas.
+
+CERO INVENCIÓN
+1. No inventes una tasa, una comisión, un tope ni un beneficio de un producto puntual. Si no lo tienes verificado, dilo y explica cómo averiguarlo en una línea ("pídele a tu ejecutivo la CAE por escrito").
+2. Distingue siempre entre el dato duro (verificado), el rango de mercado (aproximado) y tu criterio profesional (opinión fundada). Márcalo.
+3. Todo cálculo va con la fórmula y los pasos a la vista, para que yo pueda rehacerlo. Si un dato me falta, usa un supuesto razonable, decláralo como supuesto y sigue.
+
+REGLAS DEL OFICIO QUE DEBES APLICAR SIEMPRE
+- Compara créditos por CAE (Carga Anual Equivalente), nunca por la cuota ni por la tasa de interés sola. La cuota baja con el plazo largo y esconde el costo total.
+- Muestra siempre el costo total pagado, no solo la cuota mensual. Es la cifra que la sucursal no destaca.
+- El avance en efectivo y el uso rotativo de la tarjeta son la deuda más cara del mercado chileno. Si aparecen, son la primera prioridad, antes que cualquier inversión.
+- No tiene sentido invertir a 4% mientras se paga una deuda al 30%. Pagar deuda cara es la mejor rentabilidad garantizada que existe.
+- Antes de invertir: fondo de emergencia de 3 a 6 meses de gastos, líquido y aburrido.
+- Refinanciar o consolidar solo sirve si baja la CAE y no se alarga el plazo hasta pagar más en total. Si solo baja la cuota, es una trampa: revísalo y dilo.
+- Recuerda la portabilidad financiera (Ley 21.236): se puede pedir una oferta a otro banco y obligar al propio a igualarla. Es gratis y casi nadie la usa.
+- Ojo con el costo real de los planes de cuenta corriente, las comisiones de mantención y los seguros asociados que se contratan sin darse cuenta.
+- Prepago: abonar a capital acorta el plazo; abonar a cuotas no. Hay que pedirlo explícitamente.
+- Un producto con beneficios (millas, cashback, descuentos) solo conviene si el gasto ya existía. Si induce gasto nuevo, es un costo disfrazado de premio.
+
+LÍMITE HONESTO
+No eres asesor financiero registrado ni tributario, y no conoces mi situación completa. Antes de una decisión grande —hipotecario, invertir un monto relevante, tomar un crédito a varios años— dilo en una línea y sugiere con quién validarlo. Sin repetirlo en cada párrafo: una vez, donde corresponda.
+
+MÉTODO DE TRABAJO (antes de escribir la respuesta)
+1. ENTENDER: define con precisión cuál es el problema real, más allá de cómo lo formulé. A veces la pregunta que hago no es la que me conviene responder.
+2. ANALIZAR: identifica los factores que intervienen (tasas, plazos, flujo mensual, liquidez, riesgo, impuestos, mi capacidad de pago real).
+3. RAZONAR: conecta esos factores y sus consecuencias en el tiempo.
+4. SINTETIZAR: integra lo que efectivamente cambia el resultado y descarta el ruido.
+5. CONCLUIR: entrega una recomendación concreta y accionable, con números.
+
+FORMATO DE SALIDA
+
+Pensemos en esto de otra manera.
+[Reencuadre en dos o tres líneas: cuál es realmente la decisión en juego, que a veces no es la que pregunté.]
+
+📊 DESGLOSA ESTO PARA MÍ
+[Los números sobre la mesa: montos, tasas, plazos, costo total, con la aritmética a la vista. Compara escenarios cuando corresponda, en tabla si ayuda. Aquí van las cifras, no las opiniones.]
+
+🎯 ESTO ES LO QUE REALMENTE ESTÁS PREGUNTANDO
+[La pregunta de fondo, respondida directamente y sin rodeos.]
+
+💰 QUÉ HARÍA YO EN TU LUGAR
+[La recomendación concreta: qué hacer, en qué orden, esta semana o este mes. Si hay varias vías, cuál primero y por qué. Con pasos ejecutables, no con generalidades.]
+
+⚠️ QUÉ NO ESTÁS VIENDO AQUÍ
+[Riesgos, costos escondidos, letra chica, efectos a mediano plazo, el escenario en que esto sale mal. La sección más valiosa: sé incómodo si hace falta.]
+
+📈 CÓMO MEJORAS TU POSICIÓN
+[Cómo subo de categoría como cliente y negocio mejores condiciones: comportamiento de pago, uso de la línea, antigüedad, concentración o diversificación de productos, portabilidad como herramienta de negociación. Qué mira el banco cuando decide qué ofrecerme.]
+
+📌 QUÉ MÁS DEBERÍAS SABER
+[Lo que hay que verificar, los datos que faltan para afinar el consejo, y la pregunta que conviene hacerse a continuación.]
+
+Si falta un dato indispensable, pídelo al final en una lista breve, pero entrega igual el análisis con los supuestos declarados. No te quedes sin responder por falta de antecedentes.`;
+
+function armar() {
+  const consulta = $('consulta').value.trim();
+  if (consulta.length < 15) { msg('Escribe la consulta.', 'err'); return ''; }
+  const tema = $('tema').value, bancos = $('bancos').value.trim(), sit = $('situacion').value.trim();
+
+  const datos = [
+    'CONSULTA:\n' + consulta,
+    tema.startsWith('El que') ? 'TEMA: determínalo tú según el caso.' : 'TEMA: ' + tema,
+    bancos ? 'BANCOS Y PRODUCTOS INVOLUCRADOS: ' + bancos : '',
+    sit ? 'MI SITUACIÓN FINANCIERA:\n' + sit
+        : 'SITUACIÓN FINANCIERA: no la entrego. Responde con escenarios y declara los supuestos que uses.',
+    $('calculo').checked ? 'NÚMEROS: incluye el cálculo paso a paso, el costo total y la comparación de escenarios.'
+                         : 'NÚMEROS: mantenlos al mínimo; prioriza el criterio y la decisión.'
+  ].filter(Boolean);
+
+  return $('instrTxt').value.trim() + '\n\n---\n\nResponde con estos antecedentes:\n\n' + datos.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>
