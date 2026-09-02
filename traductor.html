@@ -135,7 +135,8 @@ const IDIOMAS = [
   ['Griego', 'transliteración latina'],
   ['Hindi', 'transliteración latina'],
   ['Tailandés', 'transliteración latina (RTGS)'],
-  ['Quechua', ''], ['Mapudungun', ''], ['Creol haitiano', '']
+  ['Quechua', ''], ['Mapudungun', ''], ['Rapa Nui', ''], ['Creol haitiano', ''],
+  ['Latín', 'pronunciación clásica restituida']
 ];
 
 const romDe = n => (IDIOMAS.find(i => i[0] === n) || ['',''])[1];
@@ -172,6 +173,10 @@ REGLAS
 4. Los nombres propios, las marcas y las siglas no se traducen salvo que tengan una forma establecida en el idioma de destino. Si la tienen, úsala.
 5. Las cifras, fechas, unidades y horarios se adaptan al formato del idioma de destino, pero el dato no cambia nunca. Si el formato local es ambiguo, deja el dato claro.
 6. Lo que no tiene equivalente no se inventa: se traduce por lo más cercano y se anota que es una aproximación. Esto vale sobre todo para nombres de instituciones, cargos, trámites y sistemas de salud, que no existen igual en otro país.
+
+DOS IDIOMAS QUE NECESITAN UNA ADVERTENCIA
+Rapa Nui: el corpus escrito es pequeño y la ortografía varía entre fuentes. Usa la ortografía de la Academia de la Lengua Rapa Nui, marca la vocal larga cuando corresponda, y si no estás seguro de una palabra dilo en vez de construir una que suene plausible. Cuando un concepto no exista en rapa nui, dilo y da la perífrasis, no un neologismo inventado.
+Latín: indica en una línea qué pronunciación estás usando, clásica restituida o eclesiástica, y sé consistente. Por defecto, la clásica. Para términos anatómicos y clínicos, usa la forma de la Terminologia Anatomica, que es la vigente, y respeta el caso gramatical que exige la frase: en latín cambiar el caso cambia el significado.
 
 PRONUNCIACIÓN
 Va exactamente en el sistema que te indico en los datos. Si el idioma de destino se escribe en alfabeto latino, entrega una aproximación fonética pensada para un hispanohablante, no el alfabeto fonético internacional.
