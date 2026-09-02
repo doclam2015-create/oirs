@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-operativo-180.png">
+<link rel="icon" href="icon-operativo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Operativo">
+<meta name="theme-color" content="#123a63">
+<title>Operativo de urgencia</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:80px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .nota { margin-top:10px; font-size:12.5px; color:#5a6a7c; line-height:1.5; }
+  #calculo { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px; font-size:13.5px; line-height:1.6; }
+  #calculo b { color:#123a63; }
+  .sw { display:inline-block; width:13px; height:13px; border-radius:3px; border:1px solid #98a4b2; vertical-align:-2px; margin-right:5px; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Operativo de urgencia</h1>
+<p class="sub">Arma las instrucciones exactas para actualizar las tres planillas. Sin API, sin costo por token.</p>
+
+<label>Tipo de evento</label>
+<select id="evento">
+  <option value="cambio">Cambio de turno</option>
+  <option value="fl">Feriado legal</option>
+  <option value="lm">Licencia médica</option>
+  <option value="vacante">Turno vacante</option>
+  <option value="maternal">Fuero maternal</option>
+  <option value="lactancia">Fuero lactancia</option>
+  <option value="renuncia">Renuncia voluntaria del titular</option>
+</select>
+
+<div class="fila">
+  <div>
+    <label id="lblF1">Fecha</label>
+    <input type="text" id="fecha1" placeholder="Ej: 11/05">
+  </div>
+  <div>
+    <label id="lblT1">Turno</label>
+    <select id="turno1">
+      <option value="Diurno adultos">Diurno adultos</option>
+      <option value="Diurno pediátricos">Diurno pediátricos</option>
+      <option value="Nocturno adultos">Nocturno adultos</option>
+      <option value="Nocturno pediátricos">Nocturno pediátricos</option>
+    </select>
+  </div>
+</div>
+
+<div id="bloque2">
+  <div class="fila">
+    <div>
+      <label>Segunda fecha</label>
+      <input type="text" id="fecha2" placeholder="Ej: 20/05">
+    </div>
+    <div>
+      <label>Segundo turno</label>
+      <select id="turno2">
+        <option value="Diurno adultos">Diurno adultos</option>
+        <option value="Diurno pediátricos">Diurno pediátricos</option>
+        <option value="Nocturno adultos">Nocturno adultos</option>
+        <option value="Nocturno pediátricos">Nocturno pediátricos</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<label id="lblA">Médico que asume el turno</label>
+<select id="medA"></select>
+
+<label id="lblB">Médico titular / que se ausenta</label>
+<select id="medB"></select>
+
+<label>Horas del turno</label>
+<input type="text" id="horas" value="12">
+
+<label>Observaciones <span style="font-weight:400">(opcional)</span></label>
+<textarea id="obs" placeholder="Ej: se paga a Pastas; Navarro cambia el 17/3 por necesidades del servicio"></textarea>
+
+<div class="chk"><input type="checkbox" id="resumen"><label for="resumen" style="margin:0; font-weight:400">Pedir además el resumen mensual por médico</label></div>
+
+<div id="calculo"></div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones para la IA</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_ope_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+// La nómina y las tarifas son datos duros: los resuelve la app, no el modelo.
+const CONTRATO = ['Suárez','Pastas','Ramírez','Rivera','Morales','Veliz','Navarro','Bastardo','Polanco','Nieves','Zeballos','Ocampo'];
+const HONORARIOS = ['Helms','Carvajal','Rondón','Cortes'];
+const VALOR = { Contrato: 51724, Honorarios: 28000 };
+const tipoDe = ap => CONTRATO.includes(ap) ? 'Contrato' : (HONORARIOS.includes(ap) ? 'Honorarios' : '');
+
+const EV = {
+  cambio:    { txt:'Cambio de turno',              color:'Morado claro', hex:'#d9c7ec', paga:false, sigla:'C'  },
+  fl:        { txt:'Feriado legal',                color:'Amarillo',     hex:'#ffe680', paga:true,  sigla:'FL' },
+  lm:        { txt:'Licencia médica',              color:'Naranja',      hex:'#ffc27a', paga:true,  sigla:'LM' },
+  vacante:   { txt:'Turno vacante',                color:'',             hex:'',        paga:true,  sigla:'' },
+  maternal:  { txt:'Fuero maternal',               color:'',             hex:'',        paga:true,  sigla:'' },
+  lactancia: { txt:'Fuero lactancia',              color:'',             hex:'',        paga:true,  sigla:'' },
+  renuncia:  { txt:'Renuncia voluntaria del titular', color:'',          hex:'',        paga:true,  sigla:'VR' }
+};
+// Solo estos tres motivos entran al archivo 3 según la norma vigente.
+const EN_HHEE = ['fl','lm','vacante'];
+
+const clp = n => '$' + n.toLocaleString('es-CL');
+const abrev = t => t.startsWith('Diurno') ? 'D' : 'N';
+
+function opciones(sel) {
+  sel.innerHTML = '';
+  [['Con contrato', CONTRATO], ['A honorarios', HONORARIOS]].forEach(([g, lista]) => {
+    const og = document.createElement('optgroup'); og.label = g;
+    lista.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; og.appendChild(o); });
+    sel.appendChild(og);
+  });
+}
+
+function esCambio() { return $('evento').value === 'cambio'; }
+
+function pintar() {
+  const e = $('evento').value, c = esCambio();
+  $('bloque2').style.visibility = c ? 'visible' : 'hidden';
+  $('bloque2').style.height = c ? '' : '0';
+  $('bloque2').style.overflow = 'hidden';
+  $('lblF1').textContent = c ? 'Primera fecha' : 'Fecha del turno';
+  $('lblT1').textContent = c ? 'Primer turno' : 'Turno';
+  $('lblA').textContent = c ? 'Médico que irá en la celda a modificar' : 'Médico que asume el turno';
+  $('lblB').textContent = c ? 'Médico con el que se hace el cambio' : (e === 'renuncia' ? 'Médico que renunció' : 'Médico titular / que se ausenta');
+  calcular();
+}
+
+function notacion() {
+  const e = $('evento').value, a = $('medA').value.toUpperCase(), b = $('medB').value.toUpperCase();
+  const f1 = $('fecha1').value.trim(), f2 = $('fecha2').value.trim();
+  if (e === 'cambio') return a + ' (C) ' + b + ' / ' + f1 + ' ' + f2 + ' / ' + abrev($('turno1').value) + ' ' + abrev($('turno2').value);
+  if (e === 'fl' || e === 'lm') return a + ' (' + EV[e].sigla + ') ' + b;
+  if (e === 'renuncia') return '(VR) ' + b;
+  if (e === 'vacante') return 'VACANTE. ' + b;
+  return a + ' (N) ' + EV[e].txt + ' de ' + b;
+}
+
+function calcular() {
+  const e = $('evento').value, ev = EV[e], a = $('medA').value, b = $('medB').value;
+  const h = parseFloat(($('horas').value || '').replace(',', '.')) || 0;
+  const tipo = tipoDe(a), val = VALOR[tipo] || 0, total = Math.round(val * h);
+  const l = [];
+  l.push('<b>Evento:</b> ' + ev.txt);
+  l.push('<b>Color de celda:</b> ' + (ev.color ? '<span class="sw" style="background:' + ev.hex + '"></span>' + ev.color : 'sin color asignado en la norma — la celda no se pinta'));
+  l.push('<b>Notación para la celda:</b> ' + notacion());
+  if (ev.paga) {
+    l.push('<b>Reemplaza:</b> ' + a + ' (' + tipo + ') · ' + h + ' h × ' + clp(val) + ' = <b>' + clp(total) + '</b>');
+    l.push('<b>Archivo 3 (horas extraordinarias):</b> ' + (EN_HHEE.includes(e) ? 'sí, se registra' : 'no corresponde: el motivo no está entre los tres del archivo 3'));
+  } else {
+    l.push('<b>Pago:</b> no genera. Un cambio de turno es permuta entre titulares, no reemplazo: no entra en los archivos 2 ni 3.');
+  }
+  $('calculo').innerHTML = l.join('<br>');
+  return { ev, a, b, h, tipo, val, total, e };
+}
+
+const INSTR = `Actúa como médico coordinador operativo de un servicio de urgencias y, a la vez, como analista de planillas. Tu interlocutor dirige el servicio: habla de par a par, sin preámbulos y sin explicar lo obvio.
+
+Trabajas sobre tres planillas Excel:
+
+ARCHIVO 1 — Calendario de turnos. Una hoja por mes. Cada día tiene cuatro turnos: diurno adultos, diurno pediátricos, nocturno adultos, nocturno pediátricos. Cada fila lleva número de día y día de la semana.
+ARCHIVO 2 — Gestión de reemplazos. Columnas: motivo, médico que reemplaza, número de horas, tipo de contrato, monto por hora, monto total.
+ARCHIVO 3 — Pago de horas extraordinarias. Columnas: fecha del evento, médico que asume el turno, motivo. Solo admite tres motivos: licencia médica, feriado legal y turno vacante.
+
+REGLAS DE MODIFICACIÓN DEL ARCHIVO 1
+Cambio de turno: se intercambian los apellidos de los dos médicos en los turnos correspondientes, ambas celdas en morado claro, y ambas llevan la nota "Cambio de turno: [Apellido1] ↔ [Apellido2], Día: [número], Horario: [diurno/nocturno]".
+Feriado legal: el apellido del titular se reemplaza por el del médico que cubre, celda en amarillo, nota "Feriado legal: [Apellido solicitante]".
+Licencia médica: mismo procedimiento, celda en naranja, nota "Licencia médica: [Apellido solicitante]".
+No se usa ningún otro color. Si el evento no tiene color asignado en la norma, la celda no se pinta y lo dices explícitamente en vez de elegir uno.
+
+CÓMO DEBES RESPONDER
+Entrega instrucciones ejecutables, no un relato. Un bloque por archivo, en este orden, y solo los archivos que ese evento realmente afecta:
+
+ARCHIVO 1 — CALENDARIO
+Hoja (mes), día, turno exacto, contenido anterior si se conoce, contenido nuevo de la celda, color y texto literal de la nota. Si el evento toca dos celdas, las dos.
+
+ARCHIVO 2 — REEMPLAZOS
+La fila lista para pegar, campo por campo: motivo, médico que reemplaza, horas, tipo de contrato, monto por hora, monto total.
+
+ARCHIVO 3 — HORAS EXTRAORDINARIAS
+La fila lista para pegar: fecha, médico que asume, motivo. Si el motivo no es licencia médica, feriado legal ni turno vacante, escribe que no corresponde registrar y por qué, en vez de forzar la fila.
+
+VERIFICACIÓN
+Cierra con una lista breve de lo que hay que comprobar antes de guardar: que el médico esté en la nómina autorizada, que el turno del día realmente exista, que no quede un médico asignado a dos turnos simultáneos, que la fecha coincida con el día de la semana de la planilla, y cualquier inconsistencia que detectes en los datos que te entregaron.
+
+REGLAS DURAS
+1. Los montos y el tipo de contrato vienen ya calculados por la aplicación, a partir de la nómina y de las tarifas vigentes. No los recalcules ni los corrijas: cópialos tal cual. Si crees que hay un error, no lo cambies: adviértelo al final, en una línea aparte.
+2. No corrijas fechas ni días de la semana. Se copian exactamente como vienen. Si algo no cuadra, deja el dato intacto y adviértelo en la verificación.
+3. No inventes apellidos, celdas ni referencias. Si falta un dato para completar una fila, escribe "falta: [qué]" y sigue con el resto.
+4. Solo pueden aparecer médicos de la nómina autorizada. Si te entregan un apellido que no está en ella, deténte y dilo.
+5. No sugieras colores, columnas ni campos que la norma no contempla.
+
+Analiza el caso con el método de los seis sombreros, pero por dentro: no rotules las secciones con los colores ni con los pasos del razonamiento. Lo único del método que aparece explícito es el sombrero negro, en forma de la lista de verificación final.`;
+
+function armar() {
+  const f1 = $('fecha1').value.trim();
+  if (!f1) { msg('Falta la fecha del turno.', 'err'); return ''; }
+  const c = esCambio();
+  if (c && !$('fecha2').value.trim()) { msg('Un cambio de turno necesita las dos fechas.', 'err'); return ''; }
+  const r = calcular();
+  if (r.a === r.b) { msg('Los dos médicos son el mismo. Revisa.', 'err'); return ''; }
+
+  const d = ['EVENTO: ' + r.ev.txt];
+  if (c) {
+    d.push('CELDA 1: ' + f1 + ', turno ' + $('turno1').value + ' → queda ' + r.a);
+    d.push('CELDA 2: ' + $('fecha2').value.trim() + ', turno ' + $('turno2').value + ' → queda ' + r.b);
+    d.push('COLOR: morado claro en ambas celdas');
+  } else {
+    d.push('FECHA: ' + f1);
+    d.push('TURNO: ' + $('turno1').value);
+    d.push('MÉDICO QUE ASUME: ' + r.a + ' (' + r.tipo + ')');
+    d.push('MÉDICO TITULAR: ' + r.b);
+    d.push('COLOR: ' + (r.ev.color || 'ninguno. La norma no asigna color a este evento: no pintes la celda y déjalo dicho.'));
+  }
+  d.push('NOTACIÓN QUE VA ESCRITA EN LA CELDA: ' + notacion());
+
+  if (r.ev.paga) {
+    d.push('CÁLCULO YA HECHO, NO LO REHAGAS:\n- Horas: ' + r.h + '\n- Tipo de contrato de ' + r.a + ': ' + r.tipo +
+           '\n- Monto por hora: ' + clp(r.val) + '\n- Monto total: ' + clp(r.total));
+    d.push('ARCHIVO 3: ' + (EN_HHEE.includes(r.e)
+      ? 'corresponde registrar.'
+      : 'no corresponde. El motivo no es licencia médica, feriado legal ni turno vacante. Dilo y no generes la fila.'));
+  } else {
+    d.push('SIN PAGO: es una permuta entre titulares. Solo se modifica el archivo 1. No generes filas para los archivos 2 ni 3.');
+  }
+
+  const obs = $('obs').value.trim();
+  if (obs) d.push('OBSERVACIONES: ' + obs);
+  if ($('resumen').checked) d.push('PIDE ADEMÁS: el resumen mensual acumulado por médico, con horas y monto total, después de las instrucciones de los tres archivos.');
+
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + d.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+opciones($('medA')); opciones($('medB'));
+$('medB').selectedIndex = 1;
+$('instrTxt').value = get(K.instr) || INSTR;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+pintar();
+
+['evento'].forEach(id => $(id).addEventListener('change', pintar));
+['medA','medB','turno1','turno2'].forEach(id => $(id).addEventListener('change', calcular));
+['fecha1','fecha2','horas'].forEach(id => $(id).addEventListener('input', calcular));
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTR; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>
