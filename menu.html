@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="apple-touch-icon" href="icon-menu-180.png">
+<link rel="icon" href="icon-menu.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Herramientas">
+<meta name="theme-color" content="#123a63">
+<title>Herramientas · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:24px 16px calc(40px + env(safe-area-inset-bottom));
+         font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  header { max-width:760px; margin:0 auto 18px; }
+  h1 { font-size:21px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0; font-size:13px; color:#5a6a7c; line-height:1.5; }
+  .grid { max-width:760px; margin:0 auto; display:grid; gap:12px;
+          grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
+  a.app { display:flex; align-items:center; gap:14px; min-height:76px; padding:14px;
+          background:#fff; border:1px solid #d5dde5; border-radius:14px; text-decoration:none; color:inherit; }
+  a.app:active { background:#e8f0f8; border-color:#123a63; }
+  a.app img { width:48px; height:48px; border-radius:11px; flex:0 0 48px; }
+  a.app .txt { min-width:0; }
+  a.app b { display:block; font-size:15px; color:#123a63; }
+  a.app span { display:block; margin-top:2px; font-size:12.5px; color:#5a6a7c; line-height:1.4; }
+  footer { max-width:760px; margin:22px auto 0; font-size:12px; color:#8794a2; line-height:1.55; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Herramientas</h1>
+  <p class="sub">Cada una arma el texto completo y lo copia para pegarlo en ChatGPT, Gemini o Claude. Sin API y sin costo por token.</p>
+</header>
+
+<div class="grid">
+  <a class="app" href="index.html">
+    <img src="icon.png" alt="">
+    <span class="txt"><b>Respuesta OIRS</b><span>Respuesta institucional a un reclamo, en seis módulos</span></span>
+  </a>
+  <a class="app" href="informe.html">
+    <img src="icon-informe.png" alt="">
+    <span class="txt"><b>Informe médico</b><span>El descargo del médico frente a un reclamo, en primera persona</span></span>
+  </a>
+  <a class="app" href="evaluacion.html">
+    <img src="icon-evaluacion.png" alt="">
+    <span class="txt"><b>Evaluación de desempeño</b><span>Hoja de evaluación Ley 18.476, factores y notas</span></span>
+  </a>
+  <a class="app" href="pediatra.html">
+    <img src="icon-pediatra.png" alt="">
+    <span class="txt"><b>Asistente pediátrico</b><span>Diferenciales, exámenes, conducta y dosis calculadas</span></span>
+  </a>
+  <a class="app" href="responder.html">
+    <img src="icon-correos.png" alt="">
+    <span class="txt"><b>Responder un correo</b><span>Respuesta institucional y qué revisar antes de enviarla</span></span>
+  </a>
+  <a class="app" href="escribir.html">
+    <img src="icon-escribir.png" alt="">
+    <span class="txt"><b>Redactar un correo</b><span>Correo desde cero, según a quién le escribes</span></span>
+  </a>
+  <a class="app" href="whatsapp.html">
+    <img src="icon-whatsapp.png" alt="">
+    <span class="txt"><b>WhatsApp al equipo</b><span>Cobertura de turnos y comunicaciones, con el encabezado de urgencia</span></span>
+  </a>
+  <a class="app" href="legal.html">
+    <img src="icon-legal.png" alt="">
+    <span class="txt"><b>Consulta jurídica</b><span>Derecho chileno, con verificación en LeyChile y Contraloría</span></span>
+  </a>
+  <a class="app" href="banco.html">
+    <img src="icon-banco.png" alt="">
+    <span class="txt"><b>Ejecutivo de cuentas</b><span>Deudas, tarjetas, ahorro e inversiones, sin comisión de por medio</span></span>
+  </a>
+</div>
+
+<footer>
+  Para dejarlas en la pantalla de inicio: abre esta página en Safari, toca Compartir y luego Agregar a pantalla de inicio.
+  Las instrucciones que edites dentro de cada app se guardan solo en este dispositivo.
+</footer>
+
+</body>
+</html>
