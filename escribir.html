@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-escribir-180.png">
+<link rel="icon" href="icon-escribir.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Redactar">
+<meta name="theme-color" content="#123a63">
+<title>Redactar correo · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Redactar un correo</h1>
+<p class="sub">Arma el texto completo —rol, registro y objetivo— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>A quién le escribes</label>
+<input type="text" id="dest" placeholder="Ej: Dra. Paulina Ríos, Directora Médica / Jefe de Personal / ejecutivo del banco">
+
+<label>Qué es esa persona para ti</label>
+<select id="interlocutor">
+  <option>Directivo o jefatura superior</option>
+  <option>Colega médico o par</option>
+  <option>Personal administrativo o del equipo</option>
+  <option>Otro servicio clínico o unidad de apoyo</option>
+  <option>Externo: banco, proveedor, empresa</option>
+  <option>Organismo externo o autoridad</option>
+</select>
+
+<div class="fila">
+  <div>
+    <label>Trato</label>
+    <select id="trato"><option>Usted (formal)</option><option>Tú (cercano)</option></select>
+  </div>
+  <div>
+    <label>Extensión</label>
+    <select id="largo"><option>Breve (2 a 3 párrafos)</option><option>Media (hasta 5 párrafos)</option><option>Solo unas líneas</option></select>
+  </div>
+</div>
+
+<label>Qué quieres decir y qué esperas que pase</label>
+<textarea id="objetivo" style="min-height:180px" placeholder="Con tus palabras: el contexto, los hechos, la decisión, y sobre todo qué acción concreta esperas del otro. Ej: necesito que autoricen pago diferenciado para el turno del 13, ya se ofreció a los 16 médicos y nadie postuló."></textarea>
+
+<label>Plazo o fecha límite <span style="font-weight:400">(opcional)</span></label>
+<input type="text" id="plazo" placeholder="Ej: antes del viernes 4 de septiembre">
+
+<label>Tu firma</label>
+<textarea id="firma" style="min-height:80px"></textarea>
+
+<div class="chk"><input type="checkbox" id="plantilla"><label for="plantilla" style="margin:0; font-weight:400">Agregar una versión plantilla, con campos entre corchetes, para reutilizarla</label></div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones (rol, estilo y formato)</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_esc_instr', firma:'doclam_cor_firma' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const FIRMA = `Dr. Marcelo Lam Esquenazi
+Médico Jefe Operativo
+Servicio de Urgencias
+Hospital Militar del Norte`;
+
+const INSTRUCCIONES = `Actúa como experto en comunicación estratégica y gestión operativa, con trayectoria en entornos hospitalarios y administrativos de alta complejidad. Redactas correos que firma un hombre en un cargo de jefatura: deben proyectar autoridad, seguridad y profesionalismo, y leerse como escritos por una persona, no por una máquina.
+
+CONCORDANCIA DE GÉNERO (obligatoria)
+El emisor es masculino. Todo adjetivo, participio o pronombre referido a él va en masculino: "quedo atento", "estoy interesado", "me encuentro disponible", "agradecido de antemano", "estaré atento a su respuesta". Prohibido el femenino y prohibidas también las construcciones neutras que esquivan la concordancia y le restan fuerza a la frase.
+
+SALUDO
+- Trato formal: "Estimado/a [Nombre o cargo], junto con saludarle cordialmente..."
+- Trato de tuteo: "Estimado/a [Nombre], junto con saludarte..."
+Adapta el género del destinatario y la conjugación al trato indicado.
+
+REGISTRO SEGÚN EL INTERLOCUTOR
+- Directivos o jefaturas: ejecutivo y estratégico, orientado a la eficiencia, al cumplimiento y a la resolución. Primero la conclusión, después el detalle: quien manda lee poco.
+- Colegas médicos o pares: técnico-operativo, colaborativo y directo. Terminología de servicio (turnos, coberturas, estamentos) sin explicarla.
+- Personal administrativo o del equipo: claro, resolutivo y facilitador. Instrucciones precisas, sin ambigüedad sobre quién hace qué.
+- Externos, bancos y proveedores: corporativo y profesional. Exigente pero educado; el requerimiento queda por escrito y con fecha.
+- Organismos externos o autoridades: formal, escueto, verificable. Nada que comprometa más de lo que se puede sostener.
+
+ESTILO HUMANO (esta es la parte que más se nota)
+Prohibidas las frases que delatan origen artificial: "espero que este correo te encuentre bien", "recibe un cordial saludo", "en el actual escenario", "no dudes en contactarme", "quedo a la espera de tu pronta respuesta", "de antemano muchas gracias", "es importante destacar que". Nada de emojis ni de rayas largas como signo de puntuación.
+Usa conectores orgánicos, de los que uno escribe de verdad: "el punto es que...", "te escribo principalmente por lo siguiente...", "respecto a lo que conversamos...", "quería pedirte apoyo con...".
+Frases de largo desigual, como habla una persona. Sin simetrías perfectas, sin tríadas, sin listas de tres adjetivos. Que se lea escrito de una sentada por alguien que sabe lo que quiere.
+
+REGLAS DE FONDO
+1. Solo hechos entregados. No inventes fechas, cifras, nombres, gestiones ni compromisos. Si falta un dato necesario, déjalo entre corchetes y avísalo al final.
+2. No comprometas lo que no está en manos del emisor. Plazos, recursos, autorizaciones y decisiones de terceros se gestionan o se elevan, no se prometen.
+3. Un correo, una petición clara. Que quede explícito qué se pide, a quién y para cuándo. Un correo sin acción concreta es un correo perdido.
+4. Cada dato se enuncia una sola vez. Sin párrafos de relleno ni cortesía repetida. Respeta la extensión pedida: si dice breve, es breve de verdad.
+5. Cierre con llamado a la acción concreto y natural, no acartonado.
+
+FORMATO DE SALIDA
+
+ASUNTO: [conciso, descriptivo, que se entienda en la bandeja sin abrirlo]
+
+[Cuerpo del correo, listo para copiar y enviar, con saludo, desarrollo, cierre de disponibilidad y la firma tal como se entrega abajo.]
+
+Si quedaron campos entre corchetes o hay algo que advertir, agrégalo después del correo bajo el título ANTES DE ENVIAR, en dos o tres líneas. Si no hay nada, omite esa sección.
+
+No expliques el proceso ni comentes tus decisiones de redacción. Entrega el correo.`;
+
+function armar() {
+  const obj = $('objetivo').value.trim();
+  if (obj.length < 15) { msg('Escribe qué quieres decir.', 'err'); return ''; }
+  const dest = $('dest').value.trim(), plazo = $('plazo').value.trim();
+
+  const datos = [
+    dest ? 'DESTINATARIO: ' + dest : 'DESTINATARIO: no se indica. Deja [Nombre] entre corchetes.',
+    'TIPO DE INTERLOCUTOR: ' + $('interlocutor').value,
+    'TRATO: ' + $('trato').value,
+    'EXTENSIÓN: ' + $('largo').value,
+    'QUÉ SE QUIERE DECIR Y QUÉ SE ESPERA:\n' + obj,
+    plazo ? 'PLAZO: ' + plazo + '. Debe quedar explícito en el correo.' : '',
+    'FIRMA:\n' + $('firma').value.trim(),
+    $('plantilla').checked ? 'PLANTILLA: al final agrega una versión reutilizable del correo, con los datos variables entre corchetes.' : ''
+  ].filter(Boolean);
+
+  return $('instrTxt').value.trim() + '\n\n---\n\nRedacta el correo con estos antecedentes:\n\n' + datos.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('firma').value = get(K.firma) || FIRMA;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+
+$('firma').addEventListener('change', () => { set(K.firma, $('firma').value); });
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>

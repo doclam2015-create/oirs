@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-whatsapp-180.png">
+<link rel="icon" href="icon-whatsapp.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WhatsApp">
+<meta name="theme-color" content="#123a63">
+<title>WhatsApp al equipo · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  #encab { margin-top:14px; padding:12px; border-radius:10px; background:#e8f0f8; border:1px solid #b8cde0;
+           font-size:17px; color:#123a63; text-align:center; }
+  #encab small { display:block; margin-top:4px; font-size:12px; color:#5a6a7c; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Mensaje de WhatsApp al equipo</h1>
+<p class="sub">Arma el texto completo —encabezado según urgencia, criterio y contenido— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Tipo de mensaje</label>
+<select id="tipo">
+  <option value="cob">Cobertura de turno</option>
+  <option value="otro">Otro: recordatorio, administrativo, felicitación, general</option>
+</select>
+
+<label id="lblUrg">Anticipación</label>
+<select id="urgencia"></select>
+
+<div id="encab"></div>
+
+<label>Qué necesitas comunicar</label>
+<textarea id="contenido" style="min-height:180px" placeholder="Con tus palabras: fecha y horario del turno, motivo de la vacante, a quién avisar y hasta cuándo. O el contenido del recordatorio o comunicación."></textarea>
+
+<div class="chk"><input type="checkbox" id="plantilla"><label for="plantilla" style="margin:0; font-weight:400">Agregar una versión plantilla, con campos entre corchetes, para reutilizarla</label></div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones (rol, criterio y formato)</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_wsp_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+// el encabezado lo decide la app, no la IA: la regla es determinista
+const NIVELES = {
+  cob: [
+    ['Menos de 72 horas', '\u{1F440}\u{1F6A8}\u{1F6A8}‼️', 'urgencia alta'],
+    ['Entre 3 días y 1 semana', '\u{1F440}\u{1F6A8}‼️', 'urgencia moderada'],
+    ['Más de 7 días', '\u{1F440}‼️', 'sin urgencia']
+  ],
+  otro: [
+    ['Normal', '\u{1F440}‼️', 'comunicación general'],
+    ['Urgente', '\u{1F440}\u{1F6A8}‼️', 'prioridad alta'],
+    ['Muy urgente', '\u{1F440}\u{1F6A8}\u{1F6A8}‼️', 'prioridad máxima']
+  ]
+};
+
+const INSTRUCCIONES = `Actúa como redactor profesional con formación en lingüística y experiencia operativa en servicios de urgencias. Redactas mensajes de WhatsApp que el Médico Jefe Operativo envía al grupo de médicos del Servicio de Urgencias del Hospital Militar del Norte.
+
+ENCABEZADO
+El encabezado ya viene resuelto más abajo y es obligatorio: cópialo tal cual, sin agregar ni quitar emojis, y sin cambiar el orden. Después del saludo va siempre una línea en blanco antes del cuerpo.
+
+REGLAS DE REDACCIÓN
+1. Formal, claro, directo y respetuoso. Sin ambigüedades: quien lo lee en la calle, con una mano, tiene que entender qué se pide y hasta cuándo.
+2. Corto. Es WhatsApp, no un memorándum: rara vez más de seis u ocho líneas. Sin párrafos largos.
+3. Los datos operativos van destacados y separados, no enterrados en la prosa: fecha, día de la semana, horario y tipo de turno en líneas propias.
+4. Que quede explícito qué se pide, a quién se responde y hasta cuándo hay plazo.
+5. Solo hechos entregados. No inventes fechas, nombres, motivos ni montos. Si falta un dato necesario, déjalo entre corchetes.
+6. Nunca corrijas ni ajustes un dato entregado. Las fechas, los días de la semana y los horarios se copian exactamente como vienen, aunque creas que hay un error: no recalcules el día de la semana ni "arregles" una inconsistencia en el cuerpo del mensaje. Si detectas algo que no cuadra, deja el dato intacto y adviértelo al final, en la línea que empieza con "Falta:".
+7. No expongas el motivo personal de la ausencia de un colega. Basta con que el turno está disponible o requiere cobertura.
+8. Vocabulario del servicio: turno, cobertura, jornada. Nunca "guardia". Sin adverbios de cortesía exagerados: nada de "amablemente" ni "muy agradecido de antemano".
+9. Sin emojis en el cuerpo del mensaje: los del encabezado son los únicos.
+10. Negritas de WhatsApp (con asteriscos) solo para el dato que hay que ver de una pasada: la fecha o el plazo. Con moderación.
+
+FORMATO DE SALIDA
+Entrega el mensaje listo para copiar y pegar en WhatsApp, empezando por el encabezado indicado. Nada antes ni después: ni comentarios, ni explicaciones, ni comillas envolventes. Si quedaron campos entre corchetes, agrégalos al final en una línea que empiece con "Falta:".`;
+
+function pintarUrgencia() {
+  const t = $('tipo').value;
+  $('lblUrg').textContent = t === 'cob' ? 'Anticipación' : 'Urgencia';
+  $('urgencia').innerHTML = NIVELES[t].map((n, i) => `<option value="${i}">${n[0]}</option>`).join('');
+  pintarEncab();
+}
+
+function nivel() { return NIVELES[$('tipo').value][+$('urgencia').value]; }
+
+function pintarEncab() {
+  const n = nivel();
+  $('encab').innerHTML = n[1] + ' <b>Estimados colegas</b><small>' + n[2] + '</small>';
+}
+
+function armar() {
+  const cont = $('contenido').value.trim();
+  if (cont.length < 12) { msg('Escribe qué necesitas comunicar.', 'err'); return ''; }
+  const n = nivel();
+
+  const datos = [
+    'ENCABEZADO OBLIGATORIO (cópialo textual, es la primera línea del mensaje):\n' + n[1] + ' *Estimados colegas*',
+    'TIPO DE MENSAJE: ' + ($('tipo').value === 'cob' ? 'cobertura de turno' : 'comunicación general, no es cobertura de turno'),
+    'NIVEL: ' + n[0] + ' (' + n[2] + ')',
+    'CONTENIDO A COMUNICAR:\n' + cont,
+    $('plantilla').checked ? 'PLANTILLA: al final agrega una versión reutilizable del mensaje, con los datos variables entre corchetes.' : ''
+  ].filter(Boolean);
+
+  return $('instrTxt').value.trim() + '\n\n---\n\nRedacta el mensaje con estos antecedentes:\n\n' + datos.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+pintarUrgencia();
+
+$('tipo').addEventListener('change', pintarUrgencia);
+$('urgencia').addEventListener('change', pintarEncab);
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>
