@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-informe.png">
+<link rel="icon" href="icon-informe.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Informe">
+<meta name="theme-color" content="#123a63">
+<title>Informe médico · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .fila { display:flex; gap:8px; }
+  .fila select { flex:0 0 92px; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+  #lista { margin-top:10px; }
+  #lista div { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid #e2e7ec; font-size:14px; color:#1c2430; }
+  #lista span { flex:1; }
+  #lista button { width:auto; min-height:34px; margin:0; padding:0 12px; font-size:13px; background:#8c1c1c; }
+</style>
+</head>
+<body>
+
+<h1>Informe médico frente a un reclamo</h1>
+<p class="sub">Arma el texto completo —instrucciones, identidad del médico y relato— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Médico que informa</label>
+<select id="medico"></select>
+
+<label>Fecha del informe</label>
+<input type="text" id="fecha">
+
+<label>Relato de los hechos, tal como lo entrega el médico</label>
+<textarea id="relato" style="min-height:230px" placeholder="Dicta o escribe con tus palabras: qué pasó, a qué hora, qué evaluaste, qué indicaste, qué conversaste con el paciente o su familia. La IA lo pasa a primera persona y a lenguaje formal; no inventa nada que no esté aquí."></textarea>
+
+<label>Reclamo al que responde <span style="font-weight:400">(opcional)</span></label>
+<textarea id="reclamo" placeholder="Pega el texto del reclamo para que el informe se haga cargo de cada punto alegado"></textarea>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Médicos del servicio</summary>
+  <p class="sub" style="margin-top:8px">Agrega, corrige o elimina. Se guarda en este dispositivo. El tratamiento (Dr./Dra.) define también la concordancia de "quedo atento / atenta".</p>
+  <div class="fila">
+    <select id="nuevoTrato"><option>Dr.</option><option>Dra.</option></select>
+    <input type="text" id="nuevoNombre" placeholder="Nombre y apellido">
+  </div>
+  <button class="sec" id="agregar">Agregar médico</button>
+  <div id="lista"></div>
+  <button class="sec" id="restaurarMed">Restaurar la lista original</button>
+</details>
+
+<details>
+  <summary>Instrucciones (rol, reglas y formato)</summary>
+  <textarea id="instrTxt" style="min-height:280px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <p class="sub" style="margin-top:10px">Se abre una conversación nueva y normal: el texto copiado ya lleva las instrucciones y la identidad del médico, así que no depende de ningún GPT ni Gem configurado.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_inf_instr', med:'doclam_inf_medicos' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const MEDICOS = [
+  ['Dr.',  'Oswaldo Suárez'],
+  ['Dra.', 'Cristina Barraza'],
+  ['Dr.',  'Santiago Machado'],
+  ['Dra.', 'Lina Navarro'],
+  ['Dr.',  'Huber Pastas'],
+  ['Dra.', 'Paola Nieves'],
+  ['Dra.', 'Nora Rivera'],
+  ['Dra.', 'Mariela Zeballos'],
+  ['Dra.', 'Nayravick Bastardo'],
+  ['Dra.', 'Natalia Ocampo'],
+  ['Dr.',  'Santiago Megías'],
+  ['Dra.', 'Constanza Helms'],
+  ['Dra.', 'Camila Matamoros'],
+  ['Dr.',  'Germán Cardona'],
+  ['Dra.', 'Darline Mármol'],
+  ['Dra.', 'Gisvel Hernández']
+];
+
+const INSTRUCCIONES = `Actúa como médico de urgencias con formación en redacción administrativa hospitalaria. Tu tarea es transformar el relato que el propio médico entrega sobre una atención, en un informe formal dirigido a su jefatura, en respuesta a un reclamo de un usuario del Servicio de Urgencias del Hospital Militar del Norte.
+
+REGLAS ABSOLUTAS
+1. Primera persona del singular, siempre. Todo verbo referido al facultativo va en primera persona: "evalué", "me presenté", "indiqué", "solicité". Queda prohibida la voz pasiva impersonal ("se evaluó", "se realizó el examen") para acciones del médico.
+2. Fidelidad estricta: cero tolerancia a inventar diagnósticos, fármacos, dosis, horas, exámenes, nombres o procedimientos que no estén explícitos en el relato entregado. Si un dato no está, no aparece en el informe.
+3. Registro formal, técnico y respetuoso. Elimina coloquialismos, muletillas y carga emocional; conserva íntegramente los hechos clínicos.
+4. Sin juicios de valor peyorativos sobre el paciente, su familia ni terceros. Los desacuerdos se describen de forma neutra y factual.
+5. Prohibido el uso de emojis y de cualquier carácter decorativo.
+6. Cada dato se enuncia una sola vez. Nada de párrafos de relleno ni fórmulas de cortesía repetidas: si un párrafo no aporta un hecho o una precisión nuevos, se elimina.
+7. Si se entrega el texto del reclamo, el cuerpo debe hacerse cargo de cada punto alegado, en el orden en que ocurrieron los hechos, aportando la precisión fáctica correspondiente cuando el relato la contenga. Si el relato no permite responder algún punto, no lo inventes ni lo menciones.
+8. Extensión: la mínima que cubra los hechos y los puntos reclamados. Habitualmente entre 2 y 5 párrafos.
+
+FORMATO DE SALIDA (exacto, sin títulos ni encabezados adicionales)
+
+[Fecha, tal como se entrega abajo]
+
+Estimada jefatura,
+
+Junto con saludar y en respuesta a reclamo de un usuario del servicio de Urgencia:
+
+[Cuerpo del informe: secuencia narrativa cronológica, en primera persona, basada exclusivamente en el relato entregado]
+
+Es todo cuanto puedo aportar o comentar, y quedo [atento o atenta, según el tratamiento del médico] a cualquier otro requerimiento.
+
+[Tratamiento y nombre completo del médico, tal como se entregan abajo]
+Médico del Servicio de Urgencias
+Hospital Militar del Norte
+
+Entrega solo el informe. No agregues comentarios, advertencias ni explicaciones antes o después.`;
+
+function medicos() {
+  const g = get(K.med);
+  if (g) { try { return JSON.parse(g); } catch (e) {} }
+  return MEDICOS;
+}
+
+function pintar() {
+  const lista = medicos();
+  const sel = $('medico'), previo = sel.value;
+  sel.innerHTML = lista.map((m, i) => `<option value="${i}">${m[0]} ${m[1]}</option>`).join('');
+  if (previo && previo < lista.length) sel.value = previo;
+  $('lista').innerHTML = lista.map((m, i) =>
+    `<div><span>${m[0]} ${m[1]}</span><button data-i="${i}">Quitar</button></div>`).join('');
+  $('lista').querySelectorAll('button').forEach(b => {
+    ['click','touchend'].forEach(ev => b.addEventListener(ev, e => {
+      e.preventDefault();
+      const l = medicos(); l.splice(+b.dataset.i, 1);
+      set(K.med, JSON.stringify(l)); pintar(); msg('Médico eliminado.', 'ok');
+    }, { passive:false }));
+  });
+}
+
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function hoy() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function armar() {
+  const relato = $('relato').value.trim();
+  if (relato.length < 30) { msg('Falta el relato de los hechos.', 'err'); return ''; }
+  const m = medicos()[+$('medico').value];
+  const reclamo = $('reclamo').value.trim();
+
+  const datos = [
+    'MÉDICO QUE INFORMA: ' + m[0] + ' ' + m[1],
+    'CONCORDANCIA DE GÉNERO: usa "' + (m[0] === 'Dra.' ? 'quedo atenta' : 'quedo atento') + '".',
+    'FECHA DEL INFORME: ' + $('fecha').value.trim(),
+    'RELATO DE LOS HECHOS ENTREGADO POR EL MÉDICO:\n' + relato,
+    reclamo ? 'RECLAMO AL QUE SE RESPONDE:\n' + reclamo
+            : 'RECLAMO: no se adjunta el texto. Redacta el informe con el relato disponible.'
+  ];
+
+  return $('instrTxt').value.trim() + '\n\n---\n\nRedacta el informe con estos antecedentes:\n\n' + datos.join('\n\n');
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('fecha').value = hoy();
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+pintar();
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+['click','touchend'].forEach(ev => {
+  $('agregar').addEventListener(ev, e => {
+    e.preventDefault();
+    const n = $('nuevoNombre').value.trim();
+    if (!n) { msg('Escribe el nombre del médico.', 'err'); return; }
+    const l = medicos(); l.push([$('nuevoTrato').value, n]);
+    set(K.med, JSON.stringify(l)); $('nuevoNombre').value = ''; pintar();
+    msg('Médico agregado.', 'ok');
+  }, { passive:false });
+
+  $('restaurarMed').addEventListener(ev, e => {
+    e.preventDefault(); borrar(K.med); pintar(); msg('Lista original restaurada.', 'ok');
+  }, { passive:false });
+
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    window.location.href = $('destino').value;
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>
