@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-medicamentos-180.png">
+<link rel="icon" href="icon-medicamentos.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fármacos">
+<meta name="theme-color" content="#123a63">
+<title>Medicamentos en Chile</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .nota { margin-top:10px; font-size:12.5px; color:#5a6a7c; line-height:1.5; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Medicamentos en Chile</h1>
+<p class="sub">Arma el texto completo para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Qué necesitas</label>
+<select id="modo">
+  <option value="ficha">Ficha completa del medicamento</option>
+  <option value="calc">Ficha estructurada para la calculadora de dosis</option>
+</select>
+<p class="nota" id="notaModo"></p>
+
+<label>Medicamento</label>
+<input type="text" id="farmaco" placeholder="Nombre genérico o comercial. Ej: amoxicilina, Tapsin, ondansetrón">
+
+<label>Indicación <span style="font-weight:400">(opcional, la dosis cambia según para qué)</span></label>
+<input type="text" id="indicacion" placeholder="Ej: otitis media aguda, crisis obstructiva, profilaxis">
+
+<div class="fila" id="filaPac">
+  <div>
+    <label>Peso en kg</label>
+    <input type="text" id="peso" placeholder="Ej: 14,5">
+  </div>
+  <div>
+    <label>Edad</label>
+    <input type="text" id="edad" placeholder="Ej: 3 años">
+  </div>
+</div>
+
+<div class="chk" id="chkPrecio"><input type="checkbox" id="precio"><label for="precio" style="margin:0; font-weight:400">Buscar precio y stock en farmacias chilenas, con enlaces</label></div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones del modo elegido</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', ficha:'doclam_med_ficha', calc:'doclam_med_calc' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const COMUN = `Actúa como especialista en farmacología clínica y en el mercado farmacéutico chileno. Trabajas solo con fármacos vigentes y efectivamente comercializados en Chile: nada de presentaciones discontinuadas ni de marcas que ya no están en el mercado.
+
+Tu interlocutor es un médico pediatra chileno con treinta años de ejercicio. Habla de par a par, en lenguaje técnico y sin advertencias dirigidas a legos. No escribas "consulte a su médico".
+
+BÚSQUEDA WEB (hazlo antes de escribir)
+Si dispones de búsqueda web, úsala siempre, sin esperar a que te lo pidan. Verifica el registro y las presentaciones vigentes en el ISP (ispch.gob.cl) y, cuando corresponda, en los sitios de las farmacias chilenas. Al final indica qué consultaste y la fecha y hora en horario de Santiago.
+Si no tienes búsqueda, dilo en la primera línea y limítate al principio activo, las dosis por kilo y las presentaciones que puedas afirmar con seguridad.
+
+CERO INVENCIÓN (esta regla manda sobre el formato)
+1. No inventes un código ISP, un número de registro sanitario, un nombre comercial, un laboratorio, una concentración ni un precio. Si no lo tienes verificado, escribe "no verificado" o "dato insuficiente" en ese campo. Un campo vacío es correcto; un campo inventado es un error clínico.
+2. Prefiere quedarte corto antes que rellenar. Es preferible entregar seis campos ciertos que dieciséis verosímiles.
+3. Marca cuando un dato provenga de una guía (Harriet Lane, BNF for Children, Pediamécum, Lexicomp Pediatric) y cuando sea de la ficha del producto en Chile: no siempre coinciden, y si difieren, dilo.
+4. Si la dosis varía según edad, peso o indicación, indícalo explícitamente en vez de dar un único número que solo sirve para un caso.
+
+Analiza con el método de los seis sombreros, pero por dentro: no rotules las secciones con los colores ni con los pasos del razonamiento. La respuesta se lee directa y práctica.`;
+
+const INSTR_FICHA = COMUN + `
+
+FORMATO DE SALIDA
+Esquemático y breve, en viñetas y tablas. Sin párrafos largos. Solo lo esencial, en este orden:
+
+1. NOMBRE (título)
+2. Principio activo
+3. Condición de venta, bioequivalencia y código ISP si lo verificaste
+4. Nombres comerciales, con el laboratorio o distribuidor en Chile entre paréntesis
+5. Formulaciones combinadas, si existen
+6. Composición: mg por unidad y mg/mL
+7. Presentaciones disponibles
+8. Dosis
+   - Adultos.
+   - Pediátrica: si se entrega peso o edad, muestra el cálculo completo, con la concentración usada y el volumen por toma. Si no se entregan, dilo y entrega la dosis por kilo sin estimar el peso.
+   - Dosis total diaria y dosis por toma.
+   - Ajuste renal y hepático si es estándar.
+9. Contraindicaciones relevantes
+10. Efectos adversos: los más frecuentes y los graves, separados
+11. Mejor horario de administración y condiciones de toma
+12. Interacciones importantes, con alimentos y con fármacos
+13. Precio referencial en Chile, cuando se solicite: rango, precio por unidad, y si es genérico o marca
+14. Stock y ofertas, cuando se solicite: farmacia, enlace, fecha y hora de verificación, y porcentaje de descuento si aplica. Si no pudiste abrir el sitio, escribe "no verificado" y no inventes un precio. Si hay diferencias entre fuentes, entrega el rango y la causa probable (región, formato, promoción limitada).
+15. Fuentes y fecha/hora de verificación, en horario de Santiago
+
+Si el fármaco está sin stock, sugiere alternativas equivalentes que sí estén disponibles: bioequivalentes genéricos o de marca.`;
+
+const INSTR_CALC = COMUN + `
+
+FORMATO DE SALIDA (estricto: esta ficha se ingresa a una calculadora, no la lee una persona)
+Entrega EXACTAMENTE los dieciséis campos numerados que siguen, en este orden, uno por línea, sin texto antes ni después, sin introducción, sin comentarios y sin markdown decorativo. Usa punto como separador decimal, nunca coma. Si un campo no lo puedes afirmar con certeza, escribe "dato insuficiente": un número equivocado en una calculadora de dosis es peor que un campo vacío.
+
+1. NOMBRE: nombre genérico oficial
+2. CATEGORÍA: exactamente una de esta lista, sin variantes:
+   analgesico | antibiotico | antihistaminico | antiemetico | antiviral | antifungico | corticoide | broncodilatador | mucolitico | antiparasitario | gastroprotector | espasmodico | suplemento | urologia | dermatologia | oftalmologia | otorrino | neurologia | cardiologia | hematologia | endocrinologia | psiquiatria | emergencia
+3. ICONO: un emoji representativo
+4. DOSIS (mg/kg/dosis): número decimal, dosis pediátrica habitual por dosis
+5. DOSIS MÁXIMA (mg/dosis): número entero, o "sin máximo"
+6. FRECUENCIA HORAS: número de horas entre dosis
+7. TEXTO DE FRECUENCIA: por ejemplo "Cada 8 horas (3 veces/día)"
+8. EDAD MÍNIMA: en meses, número entero
+9. DURACIÓN DEL TRATAMIENTO: texto breve
+10. PRESENTACIONES DISPONIBLES EN CHILE: solo líquidas o las que exigen calcular volumen, una por línea, con el formato "- Nombre: XX mg/ml"
+11. NOMBRES COMERCIALES EN CHILE: separados por comas
+12. FORMAS FARMACÉUTICAS: separadas por comas
+13. INDICACIONES: texto corto
+14. CONTRAINDICACIONES: relevantes en pediatría
+15. ALTERNATIVA EN CASO DE ALERGIA: fármaco o fármacos alternativos
+16. NOTA CLÍNICA: fórmula de cálculo y consideraciones, en una a tres líneas. Aquí, y solo aquí, señala si la dosis varía según edad o indicación, y cuáles son esos rangos.
+
+Los campos 4, 5, 6 y 8 deben ser números limpios, sin unidades ni texto adicional: la calculadora los lee tal cual.
+
+Única excepción al "sin texto después": las fuentes y la fecha de verificación van al final, después de una línea con tres guiones (---), para que el bloque de los dieciséis campos se pueda recortar limpio.`;
+
+const NOTAS = {
+  ficha: 'Vademécum: presentaciones, dosis, interacciones, y precio y stock si lo pides.',
+  calc:  'Los dieciséis campos en formato fijo, listos para ingresar en tu calculadora offline.'
+};
+
+function instrDefault() { return $('modo').value === 'calc' ? INSTR_CALC : INSTR_FICHA; }
+function claveInstr() { return $('modo').value === 'calc' ? K.calc : K.ficha; }
+
+function pintarModo() {
+  const calc = $('modo').value === 'calc';
+  $('notaModo').textContent = NOTAS[$('modo').value];
+  $('chkPrecio').style.visibility = calc ? 'hidden' : 'visible';
+  $('chkPrecio').style.height = calc ? '0' : '';
+  $('instrTxt').value = get(claveInstr()) || instrDefault();
+}
+
+function armar() {
+  const f = $('farmaco').value.trim();
+  if (f.length < 3) { msg('Escribe el medicamento.', 'err'); return ''; }
+  const calc = $('modo').value === 'calc';
+  const ind = $('indicacion').value.trim(), peso = $('peso').value.trim(), edad = $('edad').value.trim();
+
+  const datos = [
+    'MEDICAMENTO: ' + f,
+    ind ? 'INDICACIÓN: ' + ind : '',
+    peso ? 'PESO DEL PACIENTE: ' + peso + ' kg' : '',
+    edad ? 'EDAD DEL PACIENTE: ' + edad : '',
+    (!peso && !calc) ? 'PESO: no se entrega. No lo estimes: entrega la dosis por kilo y señala que falta el dato.' : '',
+    (!calc && $('precio').checked)
+      ? 'PRECIO Y STOCK: inclúyelos. Busca en farmacias chilenas (Cruz Verde, Salcobrand, Ahumada, Dr. Simi y similares) o en un comparador local, con enlace, fecha y hora de Santiago, y comuna si la disponibilidad es geolocalizada. Lo que no puedas verificar, márcalo como no verificado.'
+      : (!calc ? 'PRECIO Y STOCK: omite esas dos secciones.' : '')
+  ].filter(Boolean);
+
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + datos.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+pintarModo();
+
+$('modo').addEventListener('change', pintarModo);
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(claveInstr(), $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(claveInstr()); $('instrTxt').value = instrDefault(); msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>
