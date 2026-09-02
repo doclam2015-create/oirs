@@ -79,6 +79,10 @@
     <option value="https://gemini.google.com/app">Gemini</option>
     <option value="https://claude.ai/new">Claude</option>
   </select>
+  <div class="chkNat"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+
   <p class="sub" style="margin-top:10px">Se abre una conversación nueva y normal: el texto copiado ya lleva las instrucciones y los conocimientos, así que no depende de ningún GPT ni Gem configurado.</p>
 </details>
 
@@ -96,7 +100,7 @@ const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e
 const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
 
 $('destino').value = get(DEST_KEY) || 'https://chatgpt.com/';
-$('destino').addEventListener('change', () => { set(DEST_KEY, $('destino').value); msg('Destino guardado.', 'ok'); });
+$('destino').addEventListener('change', () => { set(DEST_KEY, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
 
 const INSTRUCCIONES = `Actúa como médico jefe del Servicio de Urgencias, con formación en comunicación profesional, ética clínica, leyes chilenas y redacción institucional avanzada, especializado en la respuesta formal de reclamos OIRS. Responde de manera clara, estructurada, empática y fundamentada. Analiza internamente el caso con el método de los 6 sombreros, sin mostrar ese análisis.
 
@@ -243,6 +247,34 @@ function armar() {
     $('conocTxt').value.trim();
 }
 
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() {
+  $('esquema').value = esquemaDe($('destino').value);
+}
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
 async function copiar(texto) {
   try {
     await navigator.clipboard.writeText(texto);
@@ -259,7 +291,7 @@ async function copiarYAbrir() {
   const t = armar(); if (!t) return;
   await copiar(t);
   msg('Copiado. Pega el texto en el chat y envía.', 'ok');
-  window.location.href = $('destino').value;
+  abrir();
 }
 
 async function soloCopiar() {
@@ -282,6 +314,11 @@ $('guardarInstr').addEventListener('click', () => { set(INSTR_KEY, $('instrTxt')
 $('guardarConoc').addEventListener('click', () => { set(CONOC_KEY, $('conocTxt').value); msg('Conocimientos guardados.', 'ok'); });
 $('restaurarInstr').addEventListener('click', () => { borrar(INSTR_KEY); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
 $('restaurarConoc').addEventListener('click', () => { borrar(CONOC_KEY); $('conocTxt').value = EJEMPLO; msg('Conocimientos restaurados.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
 
 ['click','touchend'].forEach(ev => {
   $('copiar').addEventListener(ev, e => { e.preventDefault(); copiarYAbrir(); }, { passive:false });

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-evaluacion.png">
+<link rel="icon" href="icon-evaluacion.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Evaluación">
+<meta name="theme-color" content="#123a63">
+<title>Evaluación de desempeño · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .dos { display:flex; gap:8px; }
+  .dos > div { flex:1; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chkNat { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chkNat input { width:22px; height:22px; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+  .fac { margin-top:12px; padding:11px; background:#fff; border:1px solid #c3ccd6; border-radius:10px; }
+  .fac .cab { display:flex; align-items:center; gap:8px; }
+  .fac .letra { flex:0 0 30px; font-weight:700; font-size:16px; color:#123a63; }
+  .fac .cab input { flex:1; }
+  .fac .cab button { width:auto; min-height:38px; margin:0; padding:0 12px; font-size:13px; background:#8c1c1c; }
+  .fac textarea { margin-top:7px; min-height:104px; font-size:14px; }
+</style>
+</head>
+<body>
+
+<h1>Evaluación de desempeño</h1>
+<p class="sub">Convierte tu apreciación del médico en la Hoja de Evaluación Ley 18.476 completa: notas por factor, puntajes y textos cualitativos. Sin API, sin costo por token.</p>
+
+<label>Médico evaluado</label>
+<select id="medico"></select>
+
+<label>Nombre completo, como debe ir en la hoja</label>
+<input type="text" id="nombre" placeholder="Ej: NOMBRE APELLIDO APELLIDO">
+
+<div class="dos">
+  <div>
+    <label>Cargo</label>
+    <input type="text" id="cargo" value="MÉDICO ADULTO">
+  </div>
+  <div>
+    <label>Fecha de contratación</label>
+    <input type="text" id="contrata" placeholder="dd/mm/aaaa">
+  </div>
+</div>
+
+<label>Período de la evaluación</label>
+<input type="text" id="periodo">
+
+<label>Apreciación del desempeño, con tus palabras</label>
+<textarea id="aprecia" style="min-height:240px" placeholder="Dicta o escribe libremente: cómo trabaja, qué destaca, qué debe mejorar, cómo se relaciona con el equipo y con los pacientes, cumplimiento de turnos, iniciativa, adherencia a protocolos. No necesitas ordenarlo por letras: la IA lo distribuye en los factores."></textarea>
+
+<label>Antecedentes documentados <span style="font-weight:400">(opcional)</span></label>
+<textarea id="antec" placeholder="Felicitaciones, reclamos OIRS, atrasos o inasistencias registradas, capacitaciones, participación en comités, incidentes. Indica si son hechos aislados o reiterados: eso cambia el ajuste."></textarea>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Factores de evaluación</summary>
+  <p class="sub" style="margin-top:8px">Si el formulario institucional cambia, edita aquí. Puedes cambiar el título de un factor, sus descriptores, quitar factores o agregar nuevos. Las letras se reasignan solas y el promedio se calcula sobre el número de factores que dejes.</p>
+  <div id="factores"></div>
+  <button class="sec" id="agregarFac">Agregar factor</button>
+  <button class="sec" id="guardarFac">Guardar factores</button>
+  <button class="sec" id="restaurarFac">Restaurar los originales</button>
+</details>
+
+<details>
+  <summary>Instrucciones (rol, reglas de calificación y formato)</summary>
+  <p class="sub" style="margin-top:8px">{N} se reemplaza por el número de factores y {ULTIMA} por la letra del último. No los borres si editas el texto.</p>
+  <textarea id="instrTxt" style="min-height:280px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Estructura del formulario</summary>
+  <p class="sub" style="margin-top:8px">Encabezado, columnas de nota, apartados cualitativos y firmas de la hoja oficial. Viaja siempre con el texto, así la IA no depende de ningún archivo cargado en un GPT.</p>
+  <textarea id="formTxt" style="min-height:260px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarForm">Guardar formulario</button>
+  <button class="sec" id="restaurarForm">Restaurar el original</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chkNat"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+
+  <p class="sub" style="margin-top:10px">La IA entrega primero una propuesta preliminar y te pide ratificarla. Recién después genera el documento. Para que salga en Word, ChatGPT es el más fiable de los tres.</p>
+  <p class="sub">La lista de médicos es la misma de la app de informes: lo que agregues allá aparece acá.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_eval_destino', instr:'doclam_eval_instr', form:'doclam_eval_form',
+            fac:'doclam_eval_factores', med:'doclam_inf_medicos' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const MEDICOS = [
+  ['Dr.','Oswaldo Suárez'], ['Dra.','Cristina Barraza'], ['Dr.','Santiago Machado'],
+  ['Dra.','Lina Navarro'], ['Dr.','Huber Pastas'], ['Dra.','Paola Nieves'],
+  ['Dra.','Nora Rivera'], ['Dra.','Mariela Zeballos'], ['Dra.','Nayravick Bastardo'],
+  ['Dra.','Natalia Ocampo'], ['Dr.','Santiago Megías'], ['Dra.','Constanza Helms'],
+  ['Dra.','Camila Matamoros'], ['Dr.','Germán Cardona'], ['Dra.','Darline Mármol'],
+  ['Dra.','Gisvel Hernández']
+];
+
+const FACTORES = [
+  ['Conocimiento de su trabajo y de las tareas asociadas a él',
+   '3. Carece de voluntad y capacidad para el desempeño de la función.\n4. Desconoce la responsabilidad para el desempeño de su función.\n5. Cumple en forma normal su desempeño.\n6. Demuestra interés y piensa antes de la ejecución de sus tareas.\n7. Evalúa y planifica acertadamente su función.'],
+  ['Calidad de trabajo realizado',
+   '3. Incompleto, malo y con pésima presentación.\n4. Tiene problemas para comprender los requerimientos de su función.\n5. Corresponde en parte a lo solicitado.\n6. Bueno, realiza su trabajo de acuerdo a lo exigido.\n7. Sobresale por su calidad.'],
+  ['Manejo cuidadoso del equipo a su cargo',
+   '3. Pierde objeto con facilidad.\n4. Poco cuidadoso y/o existen quejas por el trato del material a su cargo.\n5. Cuida y protege en forma normal sus cargos.\n6. Solicita el mantenimiento en forma oportuna.\n7. Responsable y precavido con la administración de los medios a su cargo.'],
+  ['Capacidad para tomar decisiones relacionadas con su trabajo',
+   '3. No es capaz de decidir aspectos de su responsabilidad.\n4. Habitualmente no decide y espera instrucciones.\n5. Demuestra una capacidad normal en la toma de decisiones.\n6. Posee acierto en sus decisiones.\n7. Es equilibrado y posee iniciativa con sus decisiones.'],
+  ['Conciencia de los costos vinculados a sus actividades',
+   '3. Carece de conciencia de costos y muestra poca acuciosidad.\n4. No posee conciencia por costos relacionados con su función.\n5. Posee austeridad en su acción y se ciñe al valor del arancel reglamentario.\n6. Eficiente en el empleo de los recursos.\n7. Realiza una evaluación de costos-beneficios y actúa eficientemente.'],
+  ['Aceptación al cambio',
+   '3. Se irrita o molesta fácilmente ante nuevas exigencias.\n4. Se nota afectado exageradamente por cosas a corregir.\n5. Acepta con voluntad el cambio.\n6. Coopera con iniciativa y dinamismo por el logro del objetivo.\n7. Adhiere los cambios con entusiasmo por el logro del objetivo.'],
+  ['Iniciativa orientada a lograr mejoras en su trabajo',
+   '3. Sin iniciativa ni interés por su trabajo.\n4. Demuestra poco interés y dedicación a su función.\n5. Iniciativa normal.\n6. Realiza sus actividades con iniciativa y predisposición.\n7. Investiga y desarrolla mejoras para maximizar la eficiencia.'],
+  ['Planificación, orden y método para organizar sus tareas',
+   '3. Desorganizado y sin procedimiento lógico para el desarrollo de sus tareas.\n4. No usa y demuestra falta de organización.\n5. Trata de desarrollar sus tareas con orden.\n6. Optimiza las diferentes variables de métodos de planificación y organización.\n7. Maximiza los procedimientos de planificación, orden y método en sus decisiones.'],
+  ['Orientación hacia los usuarios',
+   '3. Demuestra negligencia en el trato de atención para con los usuarios.\n4. Baja orientación a los usuarios.\n5. Informa y guía adecuadamente la atención al usuario.\n6. Potencia los puntos de contacto en el flujo de atención.\n7. Demuestra cultura de servicio.'],
+  ['Asistencia y puntualidad',
+   '3. Falta habitualmente al servicio.\n4. Tiene inasistencia con mayor frecuencia que sus compañeros.\n5. Posee una asistencia mayor al 80% del semestre.\n6. Cumple el horario dispuesto por régimen interno.\n7. Satisface plenamente su asistencia y puntualidad en el bien del servicio.'],
+  ['Relaciones interpersonales en su trabajo',
+   '3. Persona conflictiva y que presenta dificultades en sus relaciones interpersonales.\n4. Actúa tímidamente en su trabajo y le cuesta relacionarse.\n5. Se desenvuelve normalmente.\n6. Se lleva bien con su equipo y demás compañeros.\n7. Mantiene buenas relaciones y actúa coherentemente con los principios organizacionales.'],
+  ['Aceptación de las normas y procedimientos establecidos',
+   '3. Pasa por alto los aspectos reglamentarios.\n4. Se olvida frecuentemente de las órdenes, instrucciones y tareas asignadas.\n5. Acepta la reglamentación vigente.\n6. Cumple cabalmente las normas y procedimientos establecidos.\n7. Sobresale por su honorabilidad y rectitud funcionaria.']
+];
+
+const INSTRUCCIONES = `Actúa como Médico Jefe Operativo del Servicio de Urgencias del Hospital Militar del Norte, superior jerárquico responsable de preparar la evaluación profesional de desempeño de los médicos a su cargo.
+
+La evaluación es una PROPUESTA TÉCNICA para revisión y ratificación del Jefe del Servicio de Urgencias, antes de su eventual envío a RRHH. La decisión final corresponde al evaluador humano.
+
+OBJETIVOS
+Estandarizar evaluaciones, traducir apreciaciones generales en calificaciones estructuradas, mantener criterios comparables entre médicos, identificar fortalezas y áreas de mejora, y conservar la trazabilidad entre antecedente, factor, ajuste, nota y comentario. No inventes información.
+
+SISTEMA DE CALIFICACIÓN
+Escala: 3,0 - 3,5 - 4,0 - 4,5 - 5,0 - 5,5 - 6,0 - 6,5 - 7,0.
+Parte de 6,0 como nota basal en cada uno de los {N} factores.
+- Mérito, felicitación, desempeño destacado o antecedente positivo: +0,5 en el factor más relacionado.
+- Demérito, incumplimiento, incidente o aspecto relevante por mejorar: -0,5 en el factor más relacionado.
+- Nunca superes 7,0 ni bajes de 3,0.
+- No premies ni castigues dos veces el mismo hecho, salvo efectos claramente distintos y justificables.
+- Distingue hecho aislado, reiteración y patrón sostenido; ajusta la magnitud en consecuencia.
+- No inventes frecuencia, gravedad ni antecedentes.
+- Si un factor no tiene antecedentes específicos, mantén 6,0.
+
+BREVEDAD OBLIGATORIA
+Una frase breve por fundamento. Una sola idea principal por anotación. Sin introducciones ni repeticiones. Ejemplos del registro correcto: "Buen dominio técnico de sus funciones." "Debe mejorar puntualidad en turnos." "Buena adaptación a cambios operativos."
+
+PRIMERA RESPUESTA: EVALUACIÓN PRELIMINAR
+Entrega solo esto, en este orden:
+
+1. ANÁLISIS GENERAL
+Síntesis breve, profesional, equilibrada y objetiva. Usa expresiones como "Se observa...", "Se identifica como fortaleza...", "Se identifica como oportunidad de mejora...", "De acuerdo con los antecedentes aportados...". Sin lenguaje emocional, acusatorio ni subjetivo.
+
+2. EVALUACIÓN A-{ULTIMA}
+Una tabla con las columnas: Factor | Área evaluada | Nota propuesta | Fundamento. Incluye siempre los {N} factores, de la A a la {ULTIMA}, en el orden en que se listan más abajo.
+Cuando una nota se aparte de 6,0, muestra la trazabilidad en el fundamento así: 6,0 -> antecedente -> ajuste ±0,5 -> nota final.
+
+3. CÁLCULOS
+Total por cada columna de puntuación, puntaje total de los {N} factores y promedio (suma de todos los factores dividida por {N}). Verifica la aritmética antes de entregarla.
+
+4. EVALUACIÓN CUALITATIVA
+- Episodios positivos en su desempeño.
+- Áreas en que debe mejorar. Si no hay antecedentes suficientes, dilo; no inventes.
+- Necesidad de capacitación: Sí / No.
+- Tipo de capacitación: solo si está justificada.
+- Objetivos de mejora para la próxima evaluación: concretos, razonables y observables.
+- Comentarios del evaluador: síntesis profesional breve, apta para jefatura y RRHH.
+- Ascenso sujeto al resultado de la próxima calificación: Sí / No.
+- Necesidad de próxima evaluación dentro de seis meses: Sí / No, con fundamento breve.
+
+5. CONFIRMACIÓN
+Termina preguntando textualmente:
+"¿Ratificas esta propuesta de evaluación, incluidas las notas, puntaje total, promedio y textos cualitativos, o deseas realizar alguna modificación antes de generar la evaluación definitiva?"
+
+No generes el documento final sin esa aprobación.
+
+DOCUMENTO FINAL
+Solo tras la ratificación, genera un archivo Word (.docx) descargable -y PDF si se te pide- replicando la Hoja de Evaluación Personal Ley N° 18.476 que se describe más abajo: encabezado institucional, datos identificatorios, la tabla con una fila por factor y las columnas 3,0 a 7,0 con una sola X por fila, total por columna, puntaje total, promedio, los apartados cualitativos, ascenso Sí/No, reevaluación en seis meses Sí/No, espacios de firma en blanco (no inventes firmas) y el espacio para la opinión del evaluador superior.
+
+OBJETIVIDAD
+Redacción formal, institucional, sobria, técnica, respetuosa, proporcional, verificable y no discriminatoria. No uses características protegidas ni información personal sensible para modificar una evaluación. No exageres un hecho aislado ni minimices un problema reiterado. No ajustes notas para favorecer o perjudicar artificialmente al médico. Aplica criterios equivalentes ante situaciones equivalentes, considerando naturaleza, gravedad, frecuencia y contexto.
+
+Mantén siempre esta lógica: antecedente -> factor -> ajuste -> nota -> comentario -> validación humana.
+
+Si falta información imprescindible, solicítala en lugar de suponerla.`;
+
+const FORMULARIO = `HOJA DE EVALUACIÓN PERSONAL LEY N° 18.476
+Ejército de Chile - División de Salud - Hospital Militar del Norte
+Dirección de Recursos Humanos, Sección Provisión y Capacitación.
+
+Encabezado: NOMBRE, CARGO, DIRECCIÓN, FECHA DE CONTRATACIÓN, DEPTO/SECCIÓN, PERÍODO DE LA EVALUACIÓN.
+
+Tabla de áreas de evaluación: una fila por factor, en el orden listado más abajo, por nueve columnas de nota (3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0), con una sola marca X por fila. Bajo la tabla: Total por columna, Puntaje total y Promedio.
+
+Apartados cualitativos, en este orden: EPISODIOS POSITIVOS EN SU DESEMPEÑO; ÁREAS EN QUE DEBE MEJORAR; NECESIDAD DE CAPACITACIÓN SI/NO; TIPO DE CAPACITACIÓN; OBJETIVOS DE MEJORA ACORDADOS PARA LA PRÓXIMA EVALUACIÓN; COMENTARIOS DEL EVALUADOR; Ascenso sujeto al resultado de la próxima calificación SI/NO; Necesidad de una próxima evaluación dentro de 6 meses SI/NO.
+
+Cierre: FIRMA DEL EVALUADOR DIRECTO y FIRMA DEL EVALUADO; luego OPINIÓN DEL EVALUADOR SUPERIOR y FIRMA EVALUADOR SUPERIOR.
+
+Las notas intermedias (3,5 / 4,5 / 5,5 / 6,5) corresponden a desempeños situados entre dos descriptores contiguos.`;
+
+const LETRA = i => String.fromCharCode(65 + i);
+
+function leer(clave, porDefecto) {
+  const g = get(clave);
+  if (g) { try { return JSON.parse(g); } catch (e) {} }
+  return porDefecto;
+}
+
+const medicos  = () => leer(K.med, MEDICOS);
+const factores = () => leer(K.fac, FACTORES);
+
+function pintarMedicos() {
+  $('medico').innerHTML = medicos().map((m, i) => `<option value="${i}">${m[0]} ${m[1]}</option>`).join('');
+  volcarNombre();
+}
+
+function volcarNombre() {
+  const m = medicos()[+$('medico').value];
+  if (m) $('nombre').value = m[1].toUpperCase();
+}
+
+function pintarFactores() {
+  $('factores').innerHTML = factores().map((f, i) => `
+    <div class="fac">
+      <div class="cab">
+        <span class="letra">${LETRA(i)}.</span>
+        <input type="text" data-t="${i}" value="${f[0].replace(/"/g, '&quot;')}">
+        <button data-q="${i}">Quitar</button>
+      </div>
+      <textarea data-d="${i}">${f[1].replace(/</g, '&lt;')}</textarea>
+    </div>`).join('');
+  $('factores').querySelectorAll('button[data-q]').forEach(b => {
+    ['click','touchend'].forEach(ev => b.addEventListener(ev, e => {
+      e.preventDefault();
+      const l = recogerFactores(); l.splice(+b.dataset.q, 1);
+      set(K.fac, JSON.stringify(l)); pintarFactores();
+      msg('Factor eliminado. Quedan ' + l.length + '.', 'ok');
+    }, { passive:false }));
+  });
+}
+
+// lee lo que hay escrito en pantalla, para no perder ediciones sin guardar
+function recogerFactores() {
+  const t = [...$('factores').querySelectorAll('input[data-t]')];
+  const d = [...$('factores').querySelectorAll('textarea[data-d]')];
+  return t.map((x, i) => [x.value.trim(), d[i].value.trim()]);
+}
+
+function periodo() {
+  // el periodo corre de septiembre a agosto
+  const d = new Date(), a = d.getFullYear(), inicio = d.getMonth() >= 8 ? a - 1 : a - 2;
+  return `01.SEP.${inicio} AL 31.AGO.${inicio + 1}`;
+}
+
+function armar() {
+  const ap = $('aprecia').value.trim();
+  if (ap.length < 40) { msg('Falta la apreciación del desempeño.', 'err'); return ''; }
+  const nombre = $('nombre').value.trim();
+  if (!nombre) { msg('Falta el nombre del médico evaluado.', 'err'); return ''; }
+  const lista = recogerFactores().filter(f => f[0]);
+  if (!lista.length) { msg('No quedan factores de evaluación.', 'err'); return ''; }
+
+  const n = lista.length, ultima = LETRA(n - 1);
+  const instr = $('instrTxt').value.trim()
+    .replaceAll('{N}', n).replaceAll('{ULTIMA}', ultima);
+
+  const filas = lista.map((f, i) => `${LETRA(i).toLowerCase()}. ${f[0]}.`).join('\n');
+  const desc  = lista.map((f, i) => `${LETRA(i)}) ${f[0].toUpperCase()}\n${f[1]}`).join('\n\n');
+  const antec = $('antec').value.trim();
+
+  const datos = 'DATOS IDENTIFICATORIOS\n' +
+    'NOMBRE: ' + nombre +
+    '\nCARGO: ' + ($('cargo').value.trim() || 'MÉDICO ADULTO') +
+    '\nDIRECCIÓN: MÉDICA' +
+    '\nDEPTO/SECCIÓN: SERVICIO DE URGENCIAS' +
+    '\nFECHA DE CONTRATACIÓN: ' + ($('contrata').value.trim() || 'no informada') +
+    '\nPERÍODO DE LA EVALUACIÓN: ' + $('periodo').value.trim() +
+    '\n\nAPRECIACIÓN DEL DESEMPEÑO ENTREGADA POR EL JEFE OPERATIVO:\n' + ap +
+    '\n\n' + (antec ? 'ANTECEDENTES DOCUMENTADOS:\n' + antec
+                    : 'ANTECEDENTES DOCUMENTADOS: no se aportan. Trabaja solo con la apreciación anterior y mantén 6,0 en los factores sin antecedentes.');
+
+  return instr +
+    '\n\n---\n\nFORMULARIO DE REFERENCIA OBLIGATORIA:\n\n' + $('formTxt').value.trim() +
+    '\n\nFILAS DE LA TABLA (' + n + ' factores):\n' + filas +
+    '\n\n---\n\nPAUTA DE EVALUACIÓN AL DESEMPEÑO PROFESIONAL\nDescriptores oficiales por factor:\n\n' + desc +
+    '\n\n---\n\nEntrega la evaluación preliminar del siguiente médico:\n\n' + datos;
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() {
+  $('esquema').value = esquemaDe($('destino').value);
+}
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('periodo').value = periodo();
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('formTxt').value = get(K.form) || FORMULARIO;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+pintarMedicos();
+pintarFactores();
+
+$('medico').addEventListener('change', volcarNombre);
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+$('guardarForm').addEventListener('click', () => { set(K.form, $('formTxt').value); msg('Formulario guardado.', 'ok'); });
+$('restaurarForm').addEventListener('click', () => { borrar(K.form); $('formTxt').value = FORMULARIO; msg('Formulario restaurado.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('agregarFac').addEventListener(ev, e => {
+    e.preventDefault();
+    const l = recogerFactores();
+    l.push(['Nuevo factor', '3.\n4.\n5.\n6.\n7.']);
+    set(K.fac, JSON.stringify(l)); pintarFactores();
+    msg('Factor ' + LETRA(l.length - 1) + ' agregado. Edita su título y descriptores.', 'ok');
+  }, { passive:false });
+
+  $('guardarFac').addEventListener(ev, e => {
+    e.preventDefault();
+    const l = recogerFactores().filter(f => f[0]);
+    set(K.fac, JSON.stringify(l)); pintarFactores();
+    msg('Guardados ' + l.length + ' factores (A a ' + LETRA(l.length - 1) + ').', 'ok');
+  }, { passive:false });
+
+  $('restaurarFac').addEventListener(ev, e => {
+    e.preventDefault(); borrar(K.fac); pintarFactores(); msg('Factores originales restaurados.', 'ok');
+  }, { passive:false });
+
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>

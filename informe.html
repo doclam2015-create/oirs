@@ -30,6 +30,8 @@
   #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
            font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
            max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chkNat { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chkNat input { width:22px; height:22px; }
   details { margin-top:20px; font-size:13px; color:#5a6a7c; }
   #lista { margin-top:10px; }
   #lista div { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid #e2e7ec; font-size:14px; color:#1c2430; }
@@ -87,6 +89,10 @@
     <option value="https://gemini.google.com/app">Gemini</option>
     <option value="https://claude.ai/new">Claude</option>
   </select>
+  <div class="chkNat"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+
   <p class="sub" style="margin-top:10px">Se abre una conversación nueva y normal: el texto copiado ya lleva las instrucciones y la identidad del médico, así que no depende de ningún GPT ni Gem configurado.</p>
 </details>
 
@@ -196,6 +202,34 @@ function armar() {
   return $('instrTxt').value.trim() + '\n\n---\n\nRedacta el informe con estos antecedentes:\n\n' + datos.join('\n\n');
 }
 
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() {
+  $('esquema').value = esquemaDe($('destino').value);
+}
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
 async function copiar(texto) {
   try {
     await navigator.clipboard.writeText(texto);
@@ -213,9 +247,14 @@ $('instrTxt').value = get(K.instr) || INSTRUCCIONES;
 $('destino').value = get(K.dest) || 'https://chatgpt.com/';
 pintar();
 
-$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); msg('Destino guardado.', 'ok'); });
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
 $('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
 $('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
 
 ['click','touchend'].forEach(ev => {
   $('agregar').addEventListener(ev, e => {
@@ -234,7 +273,7 @@ $('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrT
   $('copiar').addEventListener(ev, async e => {
     e.preventDefault(); const t = armar(); if (!t) return;
     await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
-    window.location.href = $('destino').value;
+    abrir();
   }, { passive:false });
 
   $('soloCopiar').addEventListener(ev, async e => {
