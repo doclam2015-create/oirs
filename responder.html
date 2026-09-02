@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-correos-180.png">
+<link rel="icon" href="icon-correos.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Responder">
+<meta name="theme-color" content="#123a63">
+<title>Respuesta de correos · Urgencias</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Respuesta de correos institucionales</h1>
+<p class="sub">Arma el texto completo —rol, criterio institucional y el correo recibido— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Correo recibido</label>
+<textarea id="correo" style="min-height:200px" placeholder="Pega el correo completo, con asunto y firma si los tiene. Si es una cadena, pega también los mensajes anteriores relevantes."></textarea>
+
+<label>Quién escribe</label>
+<select id="quien">
+  <option>Dirección o jefatura superior del hospital</option>
+  <option>Un médico o funcionario del propio servicio</option>
+  <option>Otro servicio clínico o unidad de apoyo</option>
+  <option>Un paciente, familiar o usuario</option>
+  <option>OIRS, Calidad o Auditoría interna</option>
+  <option>Organismo externo (SEREMI, Superintendencia, Contraloría)</option>
+  <option>Proveedor, empresa externa o gestión administrativa</option>
+</select>
+
+<label>Qué quieres responder</label>
+<textarea id="fondo" style="min-height:150px" placeholder="Los hechos y la decisión, con tus palabras: qué se hizo, qué no se puede hacer, qué comprometes y qué no. Sin esto, la IA redacta bonito pero vacío."></textarea>
+
+<label>Tono</label>
+<select id="tono">
+  <option>Neutro institucional</option>
+  <option>Empático (hay un usuario afectado)</option>
+  <option>Firme (fijar posición o dejar constancia)</option>
+  <option>Cordial y breve (trámite simple)</option>
+</select>
+
+<label>Tu firma</label>
+<textarea id="firma" style="min-height:80px"></textarea>
+
+<div class="chk"><input type="checkbox" id="plantilla" checked><label for="plantilla" style="margin:0; font-weight:400">Agregar al final una versión plantilla, con campos entre corchetes, para reutilizarla</label></div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones (rol, criterio y formato)</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_cor_instr', firma:'doclam_cor_firma' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const FIRMA = `Dr. Marcelo Lam Esquenazi
+Médico Jefe Operativo
+Servicio de Urgencias
+Hospital Militar del Norte`;
+
+const INSTRUCCIONES = `Actúa como asesor de comunicación institucional en salud, con dominio del registro administrativo hospitalario chileno y conocimiento de la operación de un servicio de urgencias. Redactas correos que firma el Médico Jefe Operativo del Servicio de Urgencias del Hospital Militar del Norte.
+
+ANTES DE REDACTAR, CLASIFICA
+Determina qué es realmente este correo, porque de eso depende todo lo demás:
+- Una solicitud de información o de gestión.
+- Una instrucción de la jefatura que hay que acusar y comprometer.
+- Un reclamo o una molestia, sea de un usuario o de un funcionario.
+- Una discrepancia entre unidades, donde hay que fijar posición sin abrir conflicto.
+- Un requerimiento formal con plazo, de un organismo externo.
+- Un trámite menor que solo necesita un acuse breve.
+Si el correo contiene varios asuntos, sepáralos y responde cada uno; no dejes ninguno sin abordar.
+
+REGLAS DEL OFICIO
+1. Solo hechos entregados. No inventes fechas, nombres, cifras, turnos, diagnósticos ni gestiones realizadas. Si falta un dato que la respuesta necesita, deja el campo entre corchetes y avísalo al final; no lo rellenes con algo verosímil.
+2. No comprometas lo que no está en tus manos. Plazos, recursos, contrataciones, cupos, decisiones de otras unidades: se informa que se gestionará o se elevará, no se promete. Distingue lo que el jefe operativo resuelve de lo que solo puede tramitar.
+3. Empatía sin admisión de responsabilidad. Se puede lamentar lo ocurrido y hacerse cargo del malestar de una persona sin reconocer falta institucional, negligencia ni error del servicio: eso se determina por la vía formal, no por correo. Cuida especialmente esta línea cuando haya un usuario afectado o un evento adverso.
+4. Cada dato se enuncia una sola vez. Sin párrafos de relleno, sin fórmulas de cortesía repetidas, sin adverbios de cortesía exagerados. Si un párrafo no aporta un hecho, una decisión o una precisión nuevos, se elimina.
+5. Registro formal chileno, en primera persona del singular cuando el jefe actúa ("solicité", "instruí", "verifiqué") y en primera del plural cuando habla el servicio ("contamos con", "coordinamos"). Sin coloquialismos, sin emojis, sin signos decorativos.
+6. Extensión mínima suficiente. Un correo institucional se lee en pantalla y muchas veces en el teléfono: entre uno y cuatro párrafos, salvo que el asunto exija más. Si hay varios puntos, usa una lista numerada breve.
+7. Si el asunto no corresponde responderlo por correo —un reclamo formal que debe ir por OIRS, una materia disciplinaria que exige conducto formal, un requerimiento que compromete responsabilidad institucional— dilo en una línea al final, fuera del correo, antes de que se envíe.
+8. Cuando el correo fije un plazo, o lo pida, que quede explícito en la respuesta.
+
+FORMATO DE SALIDA
+
+ASUNTO: [propuesto; si es una respuesta a una cadena, mantén el asunto original con Re:]
+
+[Cuerpo del correo, listo para copiar y enviar, incluido el saludo, el cierre y la firma tal como se entrega abajo.]
+
+---
+LO QUE DEBES REVISAR ANTES DE ENVIAR
+[Lista breve: los campos entre corchetes que hay que completar, los datos que faltaron, y cualquier advertencia sobre lo que este correo compromete o sobre la vía que corresponde. Si no hay nada que advertir, escribe "sin observaciones". Esta sección no forma parte del correo.]
+
+Entrega solo eso. Sin comentarios ni explicaciones adicionales antes o después.`;
+
+function armar() {
+  const correo = $('correo').value.trim();
+  if (correo.length < 20) { msg('Pega el correo recibido.', 'err'); return ''; }
+  const fondo = $('fondo').value.trim();
+
+  const datos = [
+    'CORREO RECIBIDO:\n' + correo,
+    'QUIÉN ESCRIBE: ' + $('quien').value,
+    'TONO: ' + $('tono').value,
+    fondo ? 'QUÉ SE QUIERE RESPONDER (hechos y decisión):\n' + fondo
+          : 'QUÉ SE QUIERE RESPONDER: no se entrega. Redacta el acuse y la respuesta que el correo permite, y deja entre corchetes todo lo que requiera una definición.',
+    'FIRMA:\n' + $('firma').value.trim(),
+    $('plantilla').checked ? 'PLANTILLA: al final, después de la revisión, agrega una versión reutilizable del correo con los datos variables entre corchetes, para casos similares.' : ''
+  ].filter(Boolean);
+
+  return $('instrTxt').value.trim() + '\n\n---\n\nRedacta la respuesta con estos antecedentes:\n\n' + datos.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('firma').value = get(K.firma) || FIRMA;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+
+$('firma').addEventListener('change', () => { set(K.firma, $('firma').value); });
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>

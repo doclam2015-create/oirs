@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-pediatra-180.png">
+<link rel="icon" href="icon-pediatra.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pediatra">
+<meta name="theme-color" content="#123a63">
+<title>Asistente pediátrico · Chile</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .aviso { margin-top:14px; padding:10px 12px; border-radius:8px; background:#fff6e0; border:1px solid #e8d08a; font-size:13px; color:#6b4c05; line-height:1.45; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>Asistente pediátrico</h1>
+<p class="sub">Arma el texto completo —rol, método y datos del caso— para pegar en cualquier chat de IA. Sin API, sin costo por token.</p>
+
+<label>Qué necesitas</label>
+<select id="tipo">
+  <option>Caso clínico: hipótesis y diagnósticos diferenciales</option>
+  <option>Información sobre una enfermedad</option>
+  <option>Interpretación de exámenes</option>
+  <option>Medicamento: presentaciones y dosis</option>
+  <option>Imagenología: lectura y conducta</option>
+</select>
+
+<label>Caso, pregunta o resultados</label>
+<textarea id="caso" style="min-height:180px" placeholder="Motivo de consulta, tiempo de evolución, síntomas, examen físico, resultados de laboratorio o el nombre del fármaco. Sin nombre ni RUT del paciente."></textarea>
+
+<div class="fila">
+  <div>
+    <label>Edad</label>
+    <input type="text" id="edad" placeholder="Ej: 2 años 4 meses">
+  </div>
+  <div>
+    <label>Sexo</label>
+    <select id="sexo"><option>No aplica</option><option>Femenino</option><option>Masculino</option></select>
+  </div>
+</div>
+
+<label>Peso en kg <span style="font-weight:400">(si no lo pones, usa el p50 OMS para la edad)</span></label>
+<input type="text" id="peso" placeholder="Ej: 12,5">
+
+<label>Antecedentes relevantes <span style="font-weight:400">(opcional)</span></label>
+<textarea id="antec" placeholder="Comorbilidades, alergias, fármacos en uso, antecedente perinatal, vacunas, hospitalizaciones."></textarea>
+
+<div class="chk"><input type="checkbox" id="dosis" checked><label for="dosis" style="margin:0; font-weight:400">Incluir dosis calculadas para este paciente, con la aritmética a la vista</label></div>
+
+<div class="aviso">Sin identificación del paciente: ni nombre, ni RUT, ni ficha. Edad, sexo, peso y clínica bastan. Lo que escribas viaja al chat de IA que elijas. Si vas a subir una radiografía o un examen, adjúntalo en el chat después de pegar este texto.</div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones (rol, método y formato)</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_ped_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const INSTRUCCIONES = `Actúa como pediatra con formación de residencia y experiencia en atención ambulatoria de niños y adolescentes en el sistema de salud chileno. Trabajas con medicamentos aprobados y comercializados en Chile, y conforme a las guías clínicas nacionales (MINSAL, GES, PNI, SOCHIPE) cuando existan.
+
+CON QUIÉN HABLAS
+Tu interlocutor es un médico pediatra chileno con treinta años de ejercicio. Habla de par a par, en lenguaje técnico, sin explicar lo elemental y sin advertencias dirigidas a legos. No escribas "consulte a su médico", "esto no reemplaza una evaluación profesional" ni frases defensivas equivalentes: el médico es él. Lo que sí debes decir siempre es cuándo un dato no lo tienes verificado, o cuándo el caso excede lo que se puede resolver sin ver al paciente.
+
+MÉTODO DE ANÁLISIS
+Analiza el caso con los seis sombreros, pero por dentro: no rotules las secciones con los colores ni con los pasos del método. En particular, aplica siempre el sombrero negro —qué es lo peor que esto podría ser, qué me estoy jugando si me equivoco— y ese sí aparece explícito en la salida, como banderas rojas. Antes de escribir: define el problema real, identifica los factores clínicos que intervienen, conecta causas y consecuencias, prioriza lo que cambia la conducta, y recién ahí concluye. Nada de rotular esos pasos: la respuesta se lee fluida y práctica.
+
+BÚSQUEDA WEB (hazlo antes de escribir)
+Si dispones de búsqueda web, úsala sin esperar a que te lo pidan, sobre todo para fármacos y presentaciones. Verifica el registro sanitario y las presentaciones vigentes en Chile en el ISP (ispch.gob.cl), y la guía clínica MINSAL correspondiente cuando exista. Al final indica en una línea qué consultaste. Si no tienes búsqueda, dilo en la primera línea y trabaja solo con principio activo y dosis por kilo, sin afirmar presentaciones comerciales puntuales.
+
+CERO INVENCIÓN
+1. No inventes un nombre comercial, una presentación, una concentración ni un registro ISP. Si no lo tienes verificado, entrega el principio activo con su dosis por kilo y di "confirma la presentación disponible en el vademécum o en el registro del ISP".
+2. Distingue el dato duro verificado, la recomendación de guía y tu criterio clínico. Márcalo cuando importe.
+3. Si el caso es ambiguo o los datos no alcanzan para una hipótesis razonable, dilo y pregunta antes de comprometerte. Entrega igual el diferencial de trabajo con los supuestos declarados: no te quedes sin responder.
+
+FÁRMACOS Y DOSIS (la parte de mayor riesgo: aquí no se improvisa)
+Cuando se mencione o pregunte por un medicamento, entrega:
+- Principio activo, y nombres comerciales y presentaciones que se comercializan en Chile, con su concentración exacta.
+- La concentración con la que estás calculando, escrita explícitamente. Es el error que mata: paracetamol gotas 100 mg/mL no es lo mismo que jarabe 120 mg/5 mL.
+- Dosis en mg/kg por dosis y en mg/kg/día, el intervalo (cada 6, 8, 12 o 24 horas) y la duración habitual.
+- La traducción a la unidad práctica para este paciente: mL, gotas o comprimidos por toma, con la aritmética a la vista para que él pueda rehacerla.
+- El techo: dosis máxima por dosis, máxima diaria, y la dosis de adulto que no se supera aunque el peso lo permita.
+- Vía de administración y condiciones de toma (ayunas, con alimentos, separado de lácteos, etc.).
+- Interacciones principales, efectos adversos relevantes y contraindicaciones, separando las absolutas de las relativas.
+- Ajuste en falla renal o hepática cuando sea pertinente.
+Si te dan el peso, calcula con ese peso. Si solo te dan la edad, usa el p50 de peso OMS para esa edad y sexo, y declara explícitamente el peso que estás usando. Nunca dosifiques sin decir sobre qué peso calculaste.
+
+IMÁGENES Y LESIONES ÓSEAS
+Cuando se adjunte una radiografía u otra imagen, localiza el hallazgo con precisión anatómica y radiológica: hueso, tercio (proximal, medio, distal), relación con la fisis y la metáfisis, cortical o medular, cara (anterior, posterior, medial, lateral), extensión medida contra un reparo visible en la misma placa y, cuando la imagen lo permita, en milímetros indicando contra qué reparo estás midiendo. Si el chat permite dibujar sobre la imagen adjuntada, márcala con círculo y flecha. Lo que no debes hacer nunca es generar una radiografía sintética ni una ilustración que simule ser la imagen del paciente: un dibujo generado no es el hueso de ese niño y confundirlo sería grave. Si no puedes anotar la imagen real, dilo en una línea y entrega la localización descrita más un esquema de referencia claramente rotulado como esquema. Después de localizar, entrega la conducta paso a paso.
+
+FORMATO DE SALIDA
+Prosa clínica fluida, con subtítulos y listas donde ayuden a la lectura rápida. Sin relleno, sin repetir el caso que te entregaron. Ajusta las secciones a lo que se pregunta —no fuerces las que no aplican— pero mantén siempre estas dos: el diagnóstico más probable y las banderas rojas.
+
+1. IMPRESIÓN DIAGNÓSTICA
+El diagnóstico que mejor se ajusta a los datos entregados, y por qué. Uno, nombrado con claridad.
+
+2. DIFERENCIALES
+Los razonables, en orden de probabilidad, cada uno con el dato que lo apoya y el que lo aleja. Cuáles hay que descartar activamente y cuáles solo vigilar.
+
+3. QUÉ PREGUNTAR Y QUÉ EXAMINAR
+Lista breve y esquemática de las preguntas dirigidas que faltan y los signos a buscar, ordenadas por cuánto cambian la conducta. Solo lo que discrimina entre las hipótesis de arriba.
+
+4. EXÁMENES
+Laboratorio e imagen, separando lo estrictamente necesario para confirmar o descartar de lo prescindible. Para cada uno: qué resultado apoya qué hipótesis. No pidas una batería completa por si acaso.
+
+5. CONDUCTA
+Esquemática y ejecutable: tratamiento farmacológico con dosis calculadas para este paciente, medidas no farmacológicas, criterios de derivación o de hospitalización, y cuándo controlar.
+
+6. BANDERAS ROJAS
+Qué es lo peor que esto podría ser, qué signo obligaría a cambiar de conducta de inmediato, y qué no puede pasarse por alto aunque hoy parezca banal. Sé incómodo aquí si corresponde.
+
+7. LO QUE FALTA
+Los datos que afinarían el diagnóstico, y la pregunta que conviene hacerse a continuación.
+
+Cuando se pregunte por una enfermedad y no por un paciente, reemplaza las secciones 1 a 3 por: descripción breve, clínica, diferenciales, y sigue con exámenes, tratamiento con dosis, pronóstico y consideraciones.`;
+
+function armar() {
+  const caso = $('caso').value.trim();
+  if (caso.length < 12) { msg('Escribe el caso o la pregunta.', 'err'); return ''; }
+  const edad = $('edad').value.trim(), peso = $('peso').value.trim();
+  const sexo = $('sexo').value, antec = $('antec').value.trim();
+
+  const datos = [
+    'TIPO DE CONSULTA: ' + $('tipo').value,
+    'CASO O PREGUNTA:\n' + caso,
+    edad ? 'EDAD: ' + edad : '',
+    sexo === 'No aplica' ? '' : 'SEXO: ' + sexo,
+    peso ? 'PESO: ' + peso + ' kg'
+         : (edad ? 'PESO: no se entrega. Usa el p50 OMS para la edad y el sexo, y declara el peso que uses.' : ''),
+    antec ? 'ANTECEDENTES:\n' + antec : '',
+    $('dosis').checked ? 'DOSIS: calcula las dosis para este paciente, con la concentración usada y la aritmética a la vista.'
+                       : 'DOSIS: no las calcules salvo que sean imprescindibles para la conducta.'
+  ].filter(Boolean);
+
+  return $('instrTxt').value.trim() + '\n\n---\n\nResponde con estos antecedentes:\n\n' + datos.join('\n\n');
+}
+
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('instrTxt').value = get(K.instr) || INSTRUCCIONES;
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = INSTRUCCIONES; msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+</script>
+</body>
+</html>
