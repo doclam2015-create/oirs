@@ -39,30 +39,31 @@
 <body>
 
 <h1>Verificación de antecedentes</h1>
-<p class="sub">Credenciales, títulos y empresas, solo en registros públicos oficiales.</p>
+<p class="sub">Personas, empresas y credenciales, solo en registros públicos oficiales.</p>
 
-<label>Qué necesitas verificar</label>
-<select id="tipo">
-  <option value="prof">Credenciales de un profesional de la salud</option>
-  <option value="titulo">Título o grado académico</option>
+<label>Qué necesitas</label>
+<select id="modo">
+  <option value="credencial">Credenciales de un profesional de la salud</option>
+  <option value="postulante">Evaluar a un postulante antes de contratarlo</option>
   <option value="empresa">Una empresa o un proveedor</option>
+  <option value="defensa">Antecedentes para una defensa institucional</option>
+  <option value="contraparte">Una contraparte antes de un trato o contrato</option>
   <option value="acad">Publicaciones y trayectoria académica</option>
 </select>
-<p class="nota" id="notaTipo"></p>
+<p class="nota" id="notaModo"></p>
 
 <label id="lblNombre">Nombre completo</label>
 <input type="text" id="nombre" placeholder="Como aparece en el documento que tienes a la vista">
 
-<label>Datos que acotan la búsqueda <span style="font-weight:400">(importante)</span></label>
-<textarea id="acota" style="min-height:80px" placeholder="Especialidad, universidad, año de titulación, región, RUT de la empresa, cargo declarado. Sin esto, un homónimo se confunde con la persona que buscas."></textarea>
+<label>Datos que acotan la búsqueda <span style="font-weight:400">(lo más importante del formulario)</span></label>
+<textarea id="acota" style="min-height:90px" placeholder="Especialidad, universidad, año de titulación, región, RUT de la empresa, cargo declarado. Sin esto, un homónimo se confunde con la persona que buscas."></textarea>
 
-<label>Para qué lo necesitas</label>
-<select id="motivo">
-  <option>Verificar antecedentes antes de una contratación</option>
-  <option>Confirmar que un título o registro es real</option>
-  <option>Evaluar un proveedor antes de contratar</option>
-  <option>Confirmar la autoría de una publicación</option>
-</select>
+<label>Contexto: por qué necesitas esto</label>
+<textarea id="motivo" style="min-height:70px" placeholder="Ej: postula al cargo de médico de urgencia; es el proveedor que cotizó insumos; es el reclamante de la causa OIRS 123"></textarea>
+
+<div class="chk"><input type="checkbox" id="juris"><label for="juris" style="margin:0; font-weight:400">Incluir causas judiciales públicas</label></div>
+
+<p class="nota" id="avisoLegal"></p>
 
 <button id="copiar">Copiar y abrir el chat</button>
 <button id="soloCopiar" class="sec">Solo copiar</button>
@@ -105,86 +106,124 @@ const METODO = `Antes de escribir, trabaja el caso por dentro con los seis sombr
 
 const val = (id, et) => { const v = $(id).value.trim(); return v ? et + ': ' + v : ''; };
 
-const INSTR = `Actúa como verificador de antecedentes profesionales e institucionales en Chile. Trabajas solo con registros públicos oficiales.
+const MODOS = {
+  credencial: {
+    lbl: 'Nombre completo del profesional',
+    nota: 'Superintendencia de Salud, CONACEM y colegios profesionales. Para saber si está habilitado y con qué especialidad certificada.',
+    aviso: '',
+    enc: 'Verifica si esta persona está inscrita en el Registro Nacional de Prestadores Individuales de Salud, con qué profesión, si tiene especialidad certificada y cuál, y si su inscripción está vigente.'
+  },
+  postulante: {
+    lbl: 'Nombre completo del postulante',
+    nota: 'Habilitación, título, especialidad, sanciones e inhabilidades. Solo lo que tenga relación con el cargo.',
+    aviso: '⚠️ La Ley 19.812 prohíbe condicionar una contratación a que la persona no tenga deudas, y prohíbe exigirle cualquier certificado al respecto. No consultes Dicom ni el Boletín Comercial de un postulante a un cargo clínico: la excepción legal alcanza solo a quienes manejan fondos o representan al empleador.',
+    enc: 'Verifica los antecedentes profesionales públicos de esta persona que sean pertinentes al cargo al que postula: habilitación vigente, título, especialidad certificada, sanciones administrativas publicadas, e inhabilidades para ejercer función pública.'
+  },
+  empresa: {
+    lbl: 'Nombre o razón social',
+    nota: 'Registro de Empresas y Sociedades, SII, Mercado Público, Diario Oficial, Poder Judicial. Las personas jurídicas no tienen vida privada.',
+    aviso: '',
+    enc: 'Verifica la existencia, el estado y los antecedentes públicos de esta empresa: constitución, giro, socios y representante legal, situación tributaria pública, comportamiento como proveedor del Estado, sanciones y causas judiciales.'
+  },
+  defensa: {
+    lbl: 'Nombre del reclamante o demandante',
+    nota: 'Solo lo pertinente al caso concreto y solo de registros públicos.',
+    aviso: '⚠️ Esta búsqueda es sobre alguien que reclama contra tu servicio. Es legítima únicamente para lo pertinente al caso. Buscar su vida privada, su situación económica o sus redes sociales no sirve para la defensa y, si se usa, convierte al servicio en el infractor: la Ley 19.628 y, desde el 1 de diciembre de 2026, la Ley 21.719 obligan a los organismos públicos a tratar datos solo para la finalidad que los justifica.',
+    enc: 'Reúne únicamente los antecedentes públicos que sean pertinentes al caso concreto: causas judiciales previas sobre la misma materia, reclamos anteriores que consten en registros públicos, y su calidad para actuar en el procedimiento.'
+  },
+  contraparte: {
+    lbl: 'Nombre o razón social de la contraparte',
+    nota: 'Existencia, representación, causas públicas y antecedentes societarios, antes de firmar.',
+    aviso: '⚠️ Verificar a quien va a firmar contigo es legítimo. Reunir su vida privada no. Limítate a lo que consta en registros oficiales y a lo que tenga relación con el trato que vas a hacer.',
+    enc: 'Verifica los antecedentes públicos de esta contraparte que sean pertinentes antes de celebrar un contrato: identidad y capacidad para obligarse, existencia y vigencia si es persona jurídica, quién la representa, y causas judiciales públicas relacionadas con incumplimientos.'
+  },
+  acad: {
+    lbl: 'Nombre del autor',
+    nota: 'PubMed, SciELO, ORCID y Google Scholar.',
+    aviso: '',
+    enc: 'Verifica las publicaciones y la trayectoria académica atribuidas a esta persona.'
+  }
+};
 
-QUÉ FUENTES USAS, Y SOLO ESTAS
-- Superintendencia de Salud: Registro Nacional de Prestadores Individuales de Salud. Es la fuente que dice si alguien está habilitado para ejercer y con qué especialidad certificada.
+const INSTR = `Actúa como verificador de antecedentes en Chile. Trabajas solo con registros públicos oficiales y con fuentes verificables, y solo respondes lo que se te encargó verificar.
+
+FUENTES QUE USAS
+- Superintendencia de Salud: Registro Nacional de Prestadores Individuales de Salud, y sus resoluciones sancionatorias publicadas.
 - CONACEM y las sociedades científicas, para certificación de especialidad.
-- Registros de títulos: Mi Educación Superior del Mineduc, y el registro de la universidad emisora.
-- Registro de Empresas y Sociedades, Diario Oficial, SII y Mercado Público, para empresas y proveedores.
-- Poder Judicial, solo causas públicas y solo cuando el encargo es evaluar un proveedor o una institución.
-- Bases académicas públicas: PubMed, SciELO, Google Scholar, ORCID.
+- Mi Educación Superior del Mineduc y los registros de las universidades, para títulos y grados.
+- Registro de Empresas y Sociedades, SII, Mercado Público y Diario Oficial, para personas jurídicas.
+- Poder Judicial: causas públicas.
+- Contraloría: dictámenes, y registro de inhabilidades para la función pública.
+- Bases académicas públicas: PubMed, SciELO, ORCID, Google Scholar.
 - Colegios profesionales y sus registros de miembros.
+- Prensa, solo de medios identificables, y siempre marcada como fuente no oficial.
 
-LO QUE NO HACES
-No perfilas personas. No reúnes vida privada, domicilio, familia, situación económica, fotos, ni actividad en redes sociales. Si lo que se pide es armar el perfil de una persona en vez de verificar una credencial concreta, dilo y no lo hagas.
-No entras a nada que requiera credenciales, ni a bases restringidas, ni a datos filtrados.
-No busques a personas que no tengan una relación profesional o contractual con quien consulta.
-Si el encargo cruza ese límite, dilo en la primera línea y ofrece la versión acotada que sí corresponde.
+DOS LÍMITES LEGALES QUE DEBES APLICAR SIN QUE TE LOS PIDAN
+1. Ley 19.812: ningún empleador puede condicionar una contratación a que la persona no tenga deudas económicas, financieras, bancarias o comerciales, ni exigirle certificado alguno sobre eso. La excepción alcanza solo a quienes representan al empleador con facultades generales de administración o manejan fondos o valores. Si el encargo es evaluar a un postulante a un cargo clínico y te piden su situación de deudas, niégate y explica por qué.
+2. Ley 19.628 y, desde el 1 de diciembre de 2026, Ley 21.719 de protección de datos personales. Los datos se tratan solo para la finalidad que los justifica y solo en la medida necesaria. Un organismo público que reúne más de lo que necesita se convierte él mismo en infractor.
 
-EL ERROR QUE MÁS SE COMETE: LOS HOMÓNIMOS
-En Chile hay muchísimas personas con el mismo nombre y apellido. Confundir a dos es el modo típico de fallar, y el daño es grave: se le atribuye a alguien un antecedente que no es suyo.
-Por eso:
-1. Cada resultado va con el criterio que te permitió identificarlo: especialidad, año de titulación, universidad, región, número de registro.
-2. Si no puedes confirmar que el resultado corresponde a la persona buscada, dilo explícitamente: "coincidencia de nombre, identidad no confirmada". Nunca lo presentes como si fuera la misma persona.
-3. Si aparecen varias personas posibles, muéstralas todas y di qué dato haría falta para distinguirlas.
+PERTINENCIA: EL FILTRO QUE MANDA
+Antes de entregar cada dato, pregúntate si sirve para la finalidad declarada. Si no sirve, no lo pongas, aunque lo hayas encontrado y aunque sea público.
+No reúnas vida privada, domicilio, familia, fotografías, actividad en redes sociales, ni situación económica de una persona natural.
+Si lo que se te pide es armar el perfil de una persona en vez de verificar algo concreto, dilo y no lo hagas. Ofrece en su lugar la verificación acotada que sí corresponde.
+
+EL ERROR QUE MÁS DAÑO HACE: LOS HOMÓNIMOS
+En Chile hay muchísimas personas con el mismo nombre y apellido, y atribuirle a alguien el antecedente de su tocayo puede costarle el trabajo a una persona que no hizo nada.
+1. Cada resultado va acompañado del criterio que permitió identificarlo: especialidad, año de titulación, universidad, región, número de registro, RUT si es público.
+2. Si no puedes confirmar que el resultado corresponde a la persona buscada, escríbelo así: "coincidencia de nombre, identidad no confirmada". Nunca lo presentes como si fuera la misma persona.
+3. Si aparecen varios candidatos, muéstralos todos y di qué dato haría falta para distinguirlos.
+4. Cuando el encargo pueda afectar a alguien (una contratación, una defensa, un contrato), la identidad debe estar confirmada antes de afirmar nada en su contra. Sin confirmación, el hallazgo se reporta como pendiente de verificar, no como hecho.
 
 CÓMO PRESENTAS LO QUE ENCUENTRAS
-Separa siempre tres cosas, y no las mezcles nunca:
-- CONFIRMADO: aparece en un registro oficial, con el enlace y la fecha de consulta.
-- NO CONFIRMADO: lo encontraste en una fuente no oficial, o no pudiste verificar la identidad.
+Separa tres categorías y no las mezcles nunca:
+- CONFIRMADO: consta en un registro oficial, con enlace y fecha de consulta.
+- NO CONFIRMADO: fuente no oficial, o identidad no verificada.
 - NO ENCONTRADO: buscaste y no hay resultado.
-"No encontrado" no significa que no exista. Un registro puede estar caído, mal indexado o el nombre puede estar escrito distinto. Dilo así: nunca conviertas una ausencia de resultado en una afirmación negativa sobre alguien.
+"No encontrado" no significa que no exista. Un registro puede estar caído, mal indexado, o el nombre escrito distinto. Nunca conviertas una ausencia de resultado en una afirmación negativa sobre alguien.
+Una causa judicial iniciada no es una condena, y una condena antigua puede estar cumplida o prescrita. Si reportas una causa, reporta su estado.
 
 BÚSQUEDA WEB
-Si tienes búsqueda, úsala y cita cada fuente con enlace y fecha. Si no tienes, dilo en la primera línea y limítate a indicar en qué registro debe buscarse cada cosa, con la dirección exacta. Sin búsqueda no entregues resultados: los inventarías.
+Si tienes búsqueda, úsala y cita cada fuente con enlace y fecha de consulta. Si no tienes, dilo en la primera línea y limítate a indicar en qué registro se busca cada cosa, con la dirección exacta. Sin búsqueda no entregues resultados: los inventarías, y un antecedente inventado sobre una persona es lo más grave que puedes producir.
 
 FORMATO
-1. Qué se pidió verificar, en una línea.
+1. Qué se pidió verificar y con qué finalidad, en una línea.
 2. Tabla: dato · estado (confirmado / no confirmado / no encontrado) · fuente y fecha.
-3. Qué falta para cerrar la verificación y dónde se pide.
-4. Advertencias, si hay riesgo de homonimia o si algún dato es ambiguo.
+3. Qué queda pendiente y dónde se pide.
+4. Advertencias: riesgo de homonimia, datos ambiguos, y cualquier cosa del encargo que no correspondía responder.
 
 ` + METODO;
 
 function instrDefault() { return INSTR; }
 
-const NOTAS = {
-  prof: 'Superintendencia de Salud, CONACEM y colegios profesionales. Sirve para saber si alguien está habilitado y con qué especialidad.',
-  titulo: 'Registro del Mineduc y de la universidad emisora.',
-  empresa: 'Registro de Empresas y Sociedades, SII, Mercado Público y Diario Oficial.',
-  acad: 'PubMed, SciELO, ORCID y Google Scholar.'
-};
-const LBL = { prof:'Nombre completo del profesional', titulo:'Nombre completo', empresa:'Nombre o razón social', acad:'Nombre del autor' };
-
-function pintarTipo() {
-  $('notaTipo').textContent = NOTAS[$('tipo').value];
-  $('lblNombre').textContent = LBL[$('tipo').value];
+function pintarModo() {
+  const m = MODOS[$('modo').value];
+  $('notaModo').textContent = m.nota;
+  $('lblNombre').textContent = m.lbl;
+  $('avisoLegal').textContent = m.aviso;
+  $('avisoLegal').style.display = m.aviso ? 'block' : 'none';
 }
 
 function armar() {
   const n = $('nombre').value.trim();
   if (n.length < 4) { msg('Escribe el nombre a verificar.', 'err'); return ''; }
-  const t = $('tipo').value;
-  const QUE = {
-    prof: 'Verifica si esta persona está inscrita en el Registro Nacional de Prestadores Individuales de Salud, con qué profesión, si tiene especialidad certificada y cuál, y si su inscripción está vigente.',
-    titulo: 'Verifica si el título o grado declarado existe y fue emitido por la institución que se indica.',
-    empresa: 'Verifica la existencia y el estado de esta empresa: constitución, giro, representante legal, y si tiene antecedentes públicos relevantes como proveedor.',
-    acad: 'Verifica las publicaciones y la trayectoria académica atribuidas a esta persona.'
-  };
+  const k = $('modo').value, m = MODOS[k];
   const campos = [
-    'ENCARGO: ' + QUE[t],
+    'ENCARGO: ' + m.enc,
     'NOMBRE: ' + n,
     val('acota', 'DATOS QUE ACOTAN LA BÚSQUEDA'),
-    'MOTIVO: ' + $('motivo').value,
-    $('acota').value.trim() ? '' : 'No entregué datos que acoten la búsqueda. Adviérteme del riesgo de homonimia y dime qué dato necesitas para distinguir entre personas con el mismo nombre.',
-    'Limítate a registros públicos oficiales. No reúnas información personal ni actividad en redes sociales.'
+    val('motivo', 'CONTEXTO Y FINALIDAD'),
+    m.aviso ? 'LÍMITE APLICABLE A ESTE CASO: ' + m.aviso.replace('⚠️ ', '') : '',
+    $('juris').checked
+      ? 'CAUSAS JUDICIALES: inclúyelas, solo las públicas y solo las pertinentes a la finalidad. Indica el estado de cada una: una causa iniciada no es una condena.'
+      : 'CAUSAS JUDICIALES: no las incluyas salvo que sean imprescindibles para la finalidad declarada.',
+    $('acota').value.trim() ? '' : 'No entregué datos que acoten la búsqueda. Adviérteme del riesgo de homonimia y dime qué dato necesitas para distinguir entre personas con el mismo nombre antes de afirmar nada.',
+    'Limítate a registros públicos oficiales y a lo pertinente a la finalidad. No reúnas vida privada, situación económica de una persona natural, ni actividad en redes sociales.'
   ].filter(Boolean);
   return $('instrTxt').value.trim() + '\n\n---\n\n' + campos.join('\n\n');
 }
 
-pintarTipo();
-$('tipo').addEventListener('change', pintarTipo);
+pintarModo();
+$('modo').addEventListener('change', pintarModo);
 const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
 const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
 
