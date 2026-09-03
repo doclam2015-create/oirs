@@ -125,6 +125,7 @@ const DATOS = {
         ['Generación', 'Forester SK, quinta generación', 1, 'La SK va de 2019 a 2024 y comparte casi todos los insumos en ese rango.'],
         ['Motor', 'FB25D, 2.5 atmosférico', 1, ''],
         ['Caja', 'Lineartronic CVT', 1, ''],
+        ['Start-stop', 'sí lo trae', 1, 'Confirmado por ti. Determina el tipo de batería y explica los cortes de motor en semáforo.'],
         ['Fichas de otras IA', 'no son fuente', 0, 'La ficha que traías la generó otro modelo. Coincide en varias cosas, pero se equivocó en la capacidad de aceite, que es justo el dato que rompe un motor. Un modelo no consulta el catálogo: recuerda, y a veces recuerda mal. Sirve para saber qué buscar, no para confirmar.'],
         ['Tu VIN', 'lo ingresas abajo', 0, 'No lo dejo escrito acá: esta página es pública. Va en el campo de consulta, que no se guarda en el servidor.']
       ]],
@@ -145,15 +146,15 @@ const DATOS = {
       ]],
       ['Neumáticos y chasis', [
         ['Medida (Limited)', '225/55 R18', 1, 'Las versiones con llanta de 17" montan 225/60 R17.'],
-        ['Presión en frío', 'la etiqueta del marco de la puerta', 0, 'La ficha de la otra IA dice 33 psi delante y 32 atrás. Es un valor plausible, pero lo generó un modelo, no un manual, y aquí no vale la pena arriesgar: el número correcto está impreso en el marco de la puerta del conductor y cambia según la llanta y la carga.'],
+        ['Presión en frío', '33 psi delante · 32 psi atrás', 1, 'Equivale a 2,3 y 2,2 bar. Confirmado contra tu propio auto. Si vas cargado o con el auto lleno, sube la trasera según lo que indique la misma etiqueta.'],
         ['Torque de pernos', '120 N·m (89 lb-ft)', 1, ''],
         ['Perno de rueda', 'M12 × 1,25 · llave 19 mm', 1, ''],
         ['Rotación', 'cada 10.000 km, patrón en X', 0, 'Lo dice la ficha de la otra IA. Confirma el patrón en el manual: con tracción integral permanente el criterio no siempre es el mismo.']
       ]],
       ['Eléctrico e iluminación', [
-        ['Batería', 'lee la etiqueta de la instalada', 0, 'La ficha de la otra IA dice Grupo 35, o Q85 si trae start-stop. No lo pude confirmar. Lo que sí es cierto y sirve: si el auto tiene start-stop necesita EFB o AGM, y una batería común queda fuera de servicio en meses. El grupo exacto está escrito en la batería que traes puesta.'],
-        ['Luces bajas y altas', 'LED integrado', 0, 'En las versiones con faro full LED no hay ampolleta reemplazable: se cambia el módulo completo.'],
-        ['Neblineros', 'H16 si son halógenos', 0, 'La versión Limited suele traerlos LED. Mira el portalámparas antes de comprar.'],
+        ['Batería', 'EFB o AGM, obligatorio', 1, 'Tu auto tiene start-stop, así que esto no es opcional: necesita batería EFB o AGM. Una batería común de plomo no aguanta los ciclos de arranque y queda fuera de servicio en meses, y además el sistema empieza a desactivarse solo. El formato Q85 que menciona tu ficha es justamente una EFB japonesa. El grupo exacto lo lees en la etiqueta de la que traes puesta.'],
+        ['Luces bajas y altas', 'LED integrado', 1, 'Tu auto es full LED adelante. No hay ampolleta reemplazable: se cambia el módulo completo, y desmontarlo obliga a recalibrar el EyeSight.'],
+        ['Neblineros', 'LED, sin ampolleta reemplazable', 1, 'Confirmado en tu auto. No hay bombilla que cambiar: si uno falla, se reemplaza el módulo. Olvídate del H16, que es para las versiones con neblinero halógeno.'],
         ['Fusibles', 'Micro2 y Low Profile Mini', 0, 'Lo dice la ficha de la otra IA. El diagrama y el amperaje de cada uno van impresos en la tapa de la caja de fusibles: ahí lo confirmas en diez segundos.']
       ]],
       ['ADAS EyeSight', [
