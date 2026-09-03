@@ -121,6 +121,12 @@ const DATOS = {
     nombre: 'Subaru Forester 2023 Limited 2.5i EyeSight',
     sub: 'Motor FB25D · caja Lineartronic CVT · carrocería SK · mercado Chile',
     grupos: [
+      ['Identificación', [
+        ['Generación', 'Forester SK, quinta generación', 1, 'La SK va de 2019 a 2024 y comparte casi todos los insumos en ese rango.'],
+        ['Motor', 'FB25D, 2.5 atmosférico', 1, ''],
+        ['Caja', 'Lineartronic CVT', 1, ''],
+        ['Tu VIN', 'lo ingresas abajo', 0, 'No lo dejo escrito acá: esta página es pública. Va en el campo de consulta, que no se guarda en el servidor.']
+      ]],
       ['Fluidos y aceites', [
         ['Aceite de motor', '0W-20 sintético', 1, 'Viscosidad única para todo clima. Especificación Subaru para el FB25D.'],
         ['Capacidad de aceite', '4,2 L (4,4 qt) con filtro', 1, 'Ojo: circula el dato de 4,8 L. No corresponde al FB25D.'],
@@ -131,9 +137,9 @@ const DATOS = {
         ['Refrigerante', 'Subaru Super Coolant (azul)', 0, 'No mezclar con refrigerante verde ni rosado.']
       ]],
       ['Filtros y bujías', [
-        ['Filtro de aceite', 'por confirmar', 0, 'Circulan 15208AA15A, 15208AA160 y 15208AA170 para distintos motores Subaru. No pude confirmar cuál corresponde al FB25D 2023: verifica en el catálogo OEM con tu VIN antes de comprar.'],
-        ['Filtro de aire', 'por confirmar', 0, 'Verifica el número en la caja del filtro actual o en el catálogo con VIN.'],
-        ['Filtro de cabina', 'por confirmar', 0, 'Está detrás de la guantera. El número va impreso en el marco del filtro que sacas.'],
+        ['Filtro de aceite', '15208AA15A', 1, 'Confirmado en el catálogo Subaru para Forester. El 15208AA170 que circula en tiendas corresponde a otros modelos (BRZ, WRX, Outback): no es el tuyo.'],
+        ['Filtro de aire', '16546AA16A', 1, 'Es el que lista el catálogo Subaru en la página del Forester 2023. El 16546AA150 también circula para este auto: son la misma pieza en distinta numeración, uno reemplaza al otro.'],
+        ['Filtro de cabina', '72880FL000', 1, 'Catálogo Subaru para Forester. Va detrás de la guantera. Circula también el 72880FL00A: confirma cuál te venden, son sucesivos.'],
         ['Bujías', 'Iridio, por confirmar', 0, 'El intervalo típico en Subaru con bujías de iridio es 100.000 km, pero confirma modelo y separación en el manual.']
       ]],
       ['Neumáticos y chasis', [
