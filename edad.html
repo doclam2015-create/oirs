@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icon-edad-180.png">
+<link rel="icon" href="icon-edad.png">
+<meta name="apple-mobile-web-app-title" content="Edad">
+<meta name="theme-color" content="#8b4513">
+<title>Edad</title>
+<style>
+:root {
+  --bg: #f5f0eb;
+  --surface: #ffffff;
+  --surface2: #ede8e2;
+  --border: #d4c9bc;
+  --text-primary: #1a1410;
+  --text-secondary: #6b5e52;
+  --text-muted: #a8998c;
+  --accent: #8b4513;
+  --accent-soft: #c8956c;
+  --result-bg: #1a1410;
+  --result-text: #f5f0eb;
+  --result-accent: #c8956c;
+  --radius: 16px;
+}
+[data-theme="dark"] {
+  --bg: #0f0c0a;
+  --surface: #1c1712;
+  --surface2: #241e17;
+  --border: #3a3028;
+  --text-primary: #f0e8de;
+  --text-secondary: #a89080;
+  --text-muted: #6a5a50;
+  --accent: #c8956c;
+  --accent-soft: #e8b88a;
+  --result-bg: #241e17;
+  --result-text: #f0e8de;
+  --result-accent: #e8b88a;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 28px 16px 64px;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.container {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* HEADER */
+.header {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-box-pack: justify;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+.title-block h1 {
+  font-size: 2rem;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.title-block .subtitle {
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+/* THEME TOGGLE */
+.theme-wrap {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 6px;
+}
+.t-icon { font-size: 16px; line-height: 1; -webkit-user-select: none; user-select: none; }
+.theme-track {
+  width: 48px;
+  height: 27px;
+  border-radius: 14px;
+  background-color: var(--surface2);
+  border: 1.5px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+.theme-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  -webkit-transition: left 0.3s ease;
+  transition: left 0.3s ease;
+}
+[data-theme="dark"] .theme-thumb { left: 22px; }
+
+/* TODAY */
+.today-pill {
+  display: -webkit-inline-box;
+  display: -webkit-inline-flex;
+  display: inline-flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background-color: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  margin-bottom: 18px;
+}
+.today-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--accent);
+}
+
+/* CARD */
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+  margin-bottom: 14px;
+}
+.card-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.optional-tag {
+  display: inline-block;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background-color: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* DATE SELECTS */
+.date-row {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  gap: 8px;
+}
+.date-row select {
+  -webkit-box-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+  padding: 13px 4px;
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: center;
+  text-align-last: center;
+  outline: none;
+  cursor: pointer;
+}
+.date-row select:focus { border-color: var(--accent); }
+.sel-day   { max-width: 64px; }
+.sel-month { -webkit-flex: 2; flex: 2; }
+.sel-year  { -webkit-flex: 1.3; flex: 1.3; }
+
+/* DIVIDER */
+.divider {
+  height: 1px;
+  background: -webkit-linear-gradient(left, transparent, var(--border), transparent);
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 18px 0;
+}
+
+/* NUMBER INPUT */
+.field-wrap { position: relative; }
+.field-prefix {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+input[type="number"] {
+  width: 100%;
+  padding: 13px 13px 13px 50px;
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+input[type="number"]:focus { border-color: var(--accent); }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* BUTTON */
+.calc-btn {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 15px;
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background-color: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.calc-btn:active { opacity: 0.72; }
+
+/* ERROR */
+.error-msg {
+  display: none;
+  font-size: 0.7rem;
+  color: #c0392b;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background-color: rgba(192,57,43,0.08);
+  border-radius: 8px;
+}
+.error-msg.show { display: block; }
+
+/* RESULTS */
+.results { display: none; }
+.results.show { display: block; }
+
+@-webkit-keyframes fadeUp {
+  from { opacity: 0; -webkit-transform: translateY(10px); transform: translateY(10px); }
+  to   { opacity: 1; -webkit-transform: translateY(0);    transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.results.show {
+  -webkit-animation: fadeUp 0.4s ease both;
+  animation: fadeUp 0.4s ease both;
+}
+
+/* RESULT CARD (dark) */
+.result-card {
+  background-color: var(--result-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 18px;
+  margin-bottom: 14px;
+}
+.result-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--result-accent);
+  opacity: 0.75;
+  margin-bottom: 16px;
+}
+.age-grid {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-pack: space-around;
+  -webkit-justify-content: space-around;
+  justify-content: space-around;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.age-unit {
+  text-align: center;
+  -webkit-box-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+}
+.age-number {
+  font-size: 3rem;
+  font-weight: 200;
+  color: var(--result-text);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.age-unit-label {
+  font-size: 0.52rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--result-accent);
+  opacity: 0.6;
+  margin-top: 5px;
+}
+.age-sep {
+  font-size: 1.4rem;
+  color: var(--result-accent);
+  opacity: 0.2;
+  padding-bottom: 8px;
+}
+.total-days {
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding-top: 14px;
+}
+.total-days-number {
+  font-size: 1.3rem;
+  font-weight: 300;
+  color: var(--result-accent);
+  letter-spacing: 0.05em;
+}
+.total-days-label {
+  font-size: 0.5rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--result-accent);
+  opacity: 0.45;
+  margin-top: 3px;
+}
+
+/* FUTURE CARD */
+.future-card {
+  background-color: var(--surface);
+  border: 1.5px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.future-header {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.future-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+.future-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.8;
+}
+.future-age {
+  font-size: 3.2rem;
+  font-weight: 200;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+.future-age small {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+.future-note {
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 7px;
+}
+
+/* CLEAR BTN */
+.clear-btn {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  outline: none;
+}
+.clear-btn:active { opacity: 0.5; }
+
+@media (min-width: 375px) {
+  .age-number { font-size: 3.4rem; }
+  .future-age { font-size: 3.6rem; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="title-block">
+      <h1>Edad</h1>
+      <div class="subtitle">Calculadora cronológica</div>
+    </div>
+    <div class="theme-wrap">
+      <span class="t-icon">&#9728;</span>
+      <div class="theme-track" id="themeTrack">
+        <div class="theme-thumb"></div>
+      </div>
+      <span class="t-icon">&#9790;</span>
+    </div>
+  </div>
+
+  <div class="today-pill">
+    <div class="today-dot"></div>
+    <span id="todayLabel"></span>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Fecha de nacimiento</div>
+    <div class="date-row">
+      <select id="selDay"   class="sel-day"   aria-label="Dia"></select>
+      <select id="selMonth" class="sel-month" aria-label="Mes"></select>
+      <select id="selYear"  class="sel-year"  aria-label="Ano"></select>
+    </div>
+    <div id="errorMsg" class="error-msg"></div>
+
+    <div class="divider"></div>
+
+    <div class="card-label">
+      Año futuro de referencia
+      <span class="optional-tag">opcional</span>
+    </div>
+    <div class="field-wrap">
+      <span class="field-prefix">Año</span>
+      <input type="number" id="futureYear" placeholder="ej. 2035"
+             min="1900" max="2200" inputmode="numeric" pattern="[0-9]*" />
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card-label">
+      Edad futura objetivo
+      <span class="optional-tag">opcional</span>
+    </div>
+    <div class="field-wrap">
+      <span class="field-prefix">Años</span>
+      <input type="number" id="targetAge" placeholder="ej. 65"
+             min="1" max="150" inputmode="numeric" pattern="[0-9]*" />
+    </div>
+
+    <button class="calc-btn" id="calcBtn">Calcular</button>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-card">
+      <div class="result-label">Edad actual</div>
+      <div class="age-grid">
+        <div class="age-unit">
+          <div class="age-number" id="resYears">0</div>
+          <div class="age-unit-label">años</div>
+        </div>
+        <div class="age-sep">·</div>
+        <div class="age-unit">
+          <div class="age-number" id="resMonths">0</div>
+          <div class="age-unit-label">meses</div>
+        </div>
+        <div class="age-sep">·</div>
+        <div class="age-unit">
+          <div class="age-number" id="resDays">0</div>
+          <div class="age-unit-label">días</div>
+        </div>
+      </div>
+      <div class="total-days">
+        <div class="total-days-number" id="resTotalDays">0</div>
+        <div class="total-days-label">días de vida</div>
+      </div>
+    </div>
+
+    <div class="future-card" id="futureCard" style="display:none;">
+      <div class="future-header">
+        <div class="future-dot"></div>
+        <div class="future-label" id="futureCardLabel">En el año —</div>
+      </div>
+      <div class="future-age" id="resFutureAge">—<small>años</small></div>
+      <div class="future-note" id="futureNote"></div>
+    </div>
+
+    <div class="future-card" id="targetCard" style="display:none;">
+      <div class="future-header">
+        <div class="future-dot"></div>
+        <div class="future-label" id="targetCardLabel">Faltan para los — años</div>
+      </div>
+      <div class="age-grid" style="margin-bottom:0;">
+        <div class="age-unit">
+          <div class="age-number" id="targetResYears" style="color:var(--text-primary);">0</div>
+          <div class="age-unit-label" style="color:var(--accent);opacity:0.7;">años</div>
+        </div>
+        <div class="age-sep" style="color:var(--accent);opacity:0.25;">·</div>
+        <div class="age-unit">
+          <div class="age-number" id="targetResMonths" style="color:var(--text-primary);">0</div>
+          <div class="age-unit-label" style="color:var(--accent);opacity:0.7;">meses</div>
+        </div>
+        <div class="age-sep" style="color:var(--accent);opacity:0.25;">·</div>
+        <div class="age-unit">
+          <div class="age-number" id="targetResDays" style="color:var(--text-primary);">0</div>
+          <div class="age-unit-label" style="color:var(--accent);opacity:0.7;">días</div>
+        </div>
+      </div>
+      <div class="future-note" id="targetNote" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);"></div>
+    </div>
+
+    <button class="clear-btn" id="clearBtn">&#8635; &nbsp;Limpiar campos</button>
+  </div>
+
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+
+  /* THEME */
+  var savedTheme = '';
+  try { savedTheme = localStorage.getItem('edad_theme') || ''; } catch (e) {}
+  if (!savedTheme) {
+    savedTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  }
+  root.setAttribute('data-theme', savedTheme);
+
+  document.getElementById('themeTrack').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('edad_theme', next); } catch (e) {}
+  });
+
+  /* TODAY LABEL */
+  var DAYS   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  var now = new Date();
+  var todayY = now.getFullYear();
+  document.getElementById('todayLabel').textContent =
+    DAYS[now.getDay()] + ' ' + now.getDate() + ' de ' + MONTHS[now.getMonth()] + ' ' + todayY;
+
+  /* BUILD SELECTS */
+  var selDay   = document.getElementById('selDay');
+  var selMonth = document.getElementById('selMonth');
+  var selYear  = document.getElementById('selYear');
+
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+
+  for (var d = 1; d <= 31; d++) {
+    var o = document.createElement('option');
+    o.value = d; o.textContent = pad(d);
+    selDay.appendChild(o);
+  }
+  for (var m = 0; m < 12; m++) {
+    var o2 = document.createElement('option');
+    o2.value = m + 1; o2.textContent = MONTH_NAMES[m];
+    selMonth.appendChild(o2);
+  }
+  for (var y = todayY; y >= 1920; y--) {
+    var o3 = document.createElement('option');
+    o3.value = y; o3.textContent = y;
+    selYear.appendChild(o3);
+  }
+
+  /* RESTORE */
+  var savedBirth = '', savedFut = '', savedTarget = '';
+  try { savedBirth  = localStorage.getItem('edad_birth')   || ''; } catch (e) {}
+  try { savedFut    = localStorage.getItem('edad_future')  || ''; } catch (e) {}
+  try { savedTarget = localStorage.getItem('edad_target')  || ''; } catch (e) {}
+
+  if (savedBirth) {
+    var pts = savedBirth.split('/');
+    if (pts.length === 3) {
+      selDay.value   = parseInt(pts[0], 10);
+      selMonth.value = parseInt(pts[1], 10);
+      selYear.value  = parseInt(pts[2], 10);
+    }
+  } else {
+    selDay.value = 1; selMonth.value = 1; selYear.value = todayY - 30;
+  }
+  if (savedFut)    document.getElementById('futureYear').value = savedFut;
+  if (savedTarget) document.getElementById('targetAge').value  = savedTarget;
+
+  /* CALC HELPERS */
+  function calcAge(bY, bM0, bD, ref) {
+    var ry = ref.getFullYear(), rm = ref.getMonth(), rd = ref.getDate();
+    var years = ry - bY, months = rm - bM0, days = rd - bD;
+    if (days < 0)   { months--; days += new Date(ry, rm, 0).getDate(); }
+    if (months < 0) { years--;  months += 12; }
+    return { years: years, months: months, days: days };
+  }
+
+  /* En UTC: si no, el cambio de hora deja la resta en 4942,96 dias y se pierde uno. */
+  function totalDays(desde, hasta) {
+    var a = Date.UTC(desde.getFullYear(), desde.getMonth(), desde.getDate());
+    var b = Date.UTC(hasta.getFullYear(), hasta.getMonth(), hasta.getDate());
+    return Math.round((b - a) / 86400000);
+  }
+
+  function fmtNum(n) {
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  function isValid(y, m0, d) {
+    var dt = new Date(y, m0, d);
+    return dt.getFullYear() === y && dt.getMonth() === m0 && dt.getDate() === d;
+  }
+
+  /* Fecha real que resulta: un 29 de febrero en año no bisiesto cae al 1 de marzo. */
+  function fmtFecha(dt) {
+    return pad(dt.getDate()) + '/' + pad(dt.getMonth() + 1) + '/' + dt.getFullYear();
+  }
+
+  /* CALCULATE */
+  document.getElementById('calcBtn').addEventListener('click', function () {
+    var day   = parseInt(selDay.value,   10);
+    var month = parseInt(selMonth.value, 10);
+    var year  = parseInt(selYear.value,  10);
+    var futVal    = (document.getElementById('futureYear').value || '').trim();
+    var targetVal = (document.getElementById('targetAge').value  || '').trim();
+    var errEl  = document.getElementById('errorMsg');
+    var resEl  = document.getElementById('results');
+
+    if (!isValid(year, month - 1, day)) {
+      errEl.textContent = 'Fecha inválida (ej. 31 de febrero).';
+      errEl.className = 'error-msg show';
+      resEl.className = 'results';
+      resEl.style.display = 'none';
+      return;
+    }
+    var birth = new Date(year, month - 1, day);
+    var today2 = new Date(); today2.setHours(0, 0, 0, 0);
+    if (birth > today2) {
+      errEl.textContent = 'La fecha no puede ser futura.';
+      errEl.className = 'error-msg show';
+      resEl.className = 'results';
+      resEl.style.display = 'none';
+      return;
+    }
+    errEl.className = 'error-msg';
+
+    var age  = calcAge(year, month - 1, day, today2);
+    var dias = totalDays(birth, today2);
+    document.getElementById('resYears').textContent   = age.years;
+    document.getElementById('resMonths').textContent  = age.months;
+    document.getElementById('resDays').textContent    = age.days;
+    document.getElementById('resTotalDays').textContent = fmtNum(dias);
+
+    var futCard = document.getElementById('futureCard');
+    if (futVal.length >= 4) {
+      var fy = parseInt(futVal, 10);
+      if (fy >= year && fy <= 2200) {
+        var fBirth  = new Date(fy, month - 1, day);
+        var futAge  = calcAge(year, month - 1, day, fBirth);
+        var diff    = fy - todayY;
+        var diffTxt = diff > 0 ? 'En ' + diff + (diff === 1 ? ' año' : ' años') + ' a partir de hoy'
+                    : diff === 0 ? 'Este mismo año'
+                    : 'Hace ' + Math.abs(diff) + (Math.abs(diff) === 1 ? ' año' : ' años');
+        document.getElementById('futureCardLabel').textContent = 'En el año ' + fy;
+        document.getElementById('resFutureAge').innerHTML = futAge.years + '<small>años</small>';
+        document.getElementById('futureNote').textContent  = diffTxt + ' · edad al cumpleaños de ese año';
+        futCard.style.display = 'block';
+      } else if (fy >= 1900 && fy < year) {
+        document.getElementById('futureCardLabel').textContent = 'En el año ' + fy;
+        document.getElementById('resFutureAge').innerHTML = '—';
+        document.getElementById('futureNote').textContent = 'Ese año es anterior al nacimiento (' + year + ').';
+        futCard.style.display = 'block';
+      } else { futCard.style.display = 'none'; }
+    } else { futCard.style.display = 'none'; }
+
+    var targetCard = document.getElementById('targetCard');
+    if (targetVal !== '' && parseInt(targetVal, 10) > 0) {
+      var ta = parseInt(targetVal, 10);
+      // Fecha en que cumple la edad objetivo (cumpleanos de ese anio)
+      var targetYear = year + ta;
+      var targetDate = new Date(targetYear, month - 1, day);
+      if (targetDate <= today2) {
+        document.getElementById('targetCardLabel').textContent = 'Ya cumplió los ' + ta + ' años';
+        document.getElementById('targetResYears').textContent  = 0;
+        document.getElementById('targetResMonths').textContent = 0;
+        document.getElementById('targetResDays').textContent   = 0;
+        document.getElementById('targetNote').textContent = 'Los cumplió el ' + fmtFecha(targetDate);
+        targetCard.style.display = 'block';
+      } else {
+        var remaining = calcAge(today2.getFullYear(), today2.getMonth(), today2.getDate(), targetDate);
+        document.getElementById('targetCardLabel').textContent = 'Faltan para los ' + ta + ' años';
+        document.getElementById('targetResYears').textContent  = remaining.years;
+        document.getElementById('targetResMonths').textContent = remaining.months;
+        document.getElementById('targetResDays').textContent   = remaining.days;
+        document.getElementById('targetNote').textContent =
+          'Los cumplirá el ' + fmtFecha(targetDate) + ' · faltan ' + fmtNum(totalDays(today2, targetDate)) + ' días';
+        targetCard.style.display = 'block';
+      }
+    } else {
+      targetCard.style.display = 'none';
+    }
+
+    try {
+      localStorage.setItem('edad_birth', pad(day) + '/' + pad(month) + '/' + year);
+      if (futVal)    localStorage.setItem('edad_future', futVal);
+      if (targetVal) localStorage.setItem('edad_target', targetVal);
+    } catch (e) {}
+
+    /* Show with animation restart */
+    resEl.className = 'results';
+    resEl.style.display = 'none';
+    var dummy = resEl.offsetHeight; // reflow
+    resEl.style.display = 'block';
+    resEl.className = 'results show';
+
+    setTimeout(function () {
+      resEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 60);
+  });
+
+  /* CLEAR */
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    selDay.value = 1; selMonth.value = 1; selYear.value = todayY - 30;
+    document.getElementById('futureYear').value = '';
+    document.getElementById('targetAge').value  = '';
+    document.getElementById('errorMsg').className = 'error-msg';
+    var resEl = document.getElementById('results');
+    resEl.className = 'results';
+    resEl.style.display = 'none';
+    try { localStorage.removeItem('edad_birth'); localStorage.removeItem('edad_future'); localStorage.removeItem('edad_target'); } catch (e) {}
+    window.scrollTo(0, 0);
+  });
+
+  /* AUTO-CALC */
+  if (savedBirth) {
+    setTimeout(function () { document.getElementById('calcBtn').click(); }, 180);
+  }
+}());
+</script>
+</body>
+</html>
