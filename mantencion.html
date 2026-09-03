@@ -169,19 +169,39 @@ const DATOS = {
     ]
   },
   suz: {
-    nombre: 'Suzuki Fronx 2026',
-    sub: 'Mercado Chile · modelo muy reciente',
+    nombre: 'Suzuki Fronx 2026 Hybrid',
+    sub: 'Motor K15C 1.5 Dualjet con SHVS · fabricado por Maruti Suzuki en India · mercado Chile',
     grupos: [
-      ['Estado de los datos', [
-        ['Ficha técnica', 'no publicada todavía', 0, 'El Fronx 2026 es demasiado nuevo para que existan manuales y catálogos de partes verificables en línea. Prefiero no darte números antes que darte números inventados: una capacidad de aceite equivocada le cuesta el motor.'],
-        ['Qué hacer', 'usa el manual del auto', 1, 'El manual del propietario que viene en la guantera trae capacidades, viscosidades y el plan de mantención del año exacto. Es la única fuente que no se equivoca de versión ni de mercado.'],
-        ['Motor', 'confirma cuál te tocó', 0, 'El Fronx se vende con más de una motorización y con o sin sistema híbrido ligero según el mercado. Eso cambia el aceite, la batería y el plan de servicio.'],
-        ['Presión de neumáticos', 'marco de la puerta', 1, 'La etiqueta del marco de la puerta del conductor es válida para tu auto específico.'],
-        ['Repuestos', 'catálogo Suzuki con VIN', 1, 'Pide los números de parte en el concesionario con tu VIN. Es gratis y es exacto.']
+      ['Identificación (leída de tu VIN)', [
+        ['Fabricante', 'Maruti Suzuki, India', 1, 'El WMI del VIN empieza en MBH, que corresponde a Maruti Suzuki India. El servicio y los repuestos salen del catálogo Maruti, no del japonés.'],
+        ['Año modelo', '2026', 1, 'Décima posición del VIN.'],
+        ['Dígito verificador', 'válido', 1, 'El VIN cuadra con el algoritmo estándar, así que está bien transcrito.'],
+        ['Motor', 'K15C 1.5 Dualjet, 1.462 cc', 1, '101 HP a 6.000 rpm y 136,8 N·m a 4.400 rpm en la ficha chilena.'],
+        ['Sistema híbrido', 'SHVS, microhíbrido de 12 V', 1, 'Es asistencia eléctrica, no un híbrido que mueva el auto solo.']
+      ]],
+      ['Fluidos y filtros', [
+        ['Aceite de motor', '5W-30 API SQ / ILSAC GF-7A o lo que indique el manual', 0, 'La viscosidad puede variar según mercado. La del manual manda: en un motor Dualjet nuevo, una viscosidad equivocada afecta el consumo y la garantía.'],
+        ['Capacidad de aceite', 'del orden de 3,5 L', 0, 'Cifra de fuentes de repuestos, no del manual. Confírmala antes de comprar: llenar de más un motor chico es peor que en uno grande.'],
+        ['Filtro de aceite', '16510-81400 según catálogos de repuestos', 0, 'Es el número que aparece para el K15C en tiendas chilenas. No es una confirmación del catálogo oficial: pídelo en Derco con tu VIN.'],
+        ['Filtro de aire y de cabina', 'por confirmar', 0, 'Pídelos con el VIN. El número también va impreso en el marco del filtro que sacas.'],
+        ['Refrigerante y líquido de frenos', 'por confirmar', 0, 'Van en el manual y en la tapa de cada depósito.']
+      ]],
+      ['Neumáticos', [
+        ['Medida', '195/60 R16', 0, 'Es la medida de la ficha chilena del Fronx. Confirma contra la etiqueta de tu auto: puede cambiar según versión.'],
+        ['Presión en frío', 'la del marco de la puerta', 1, 'La etiqueta del marco de la puerta del conductor es válida para tu auto específico y para su carga.'],
+        ['Torque de pernos', 'por confirmar', 0, 'Va en el manual, junto al gato. No lo aprietes a ojo.']
+      ]],
+      ['Eléctrico', [
+        ['Batería', 'sistema microhíbrido: no es una batería común', 0, 'El SHVS trabaja con una batería de plomo de arranque y una unidad de litio auxiliar, más un motor-generador. Cambiar la batería principal por una convencional cualquiera puede dejar el sistema fuera de servicio. Que la reemplace el servicio técnico o pídela por VIN.'],
+        ['Luces', 'por confirmar', 0, 'Mira el portalámparas: si es un módulo LED sellado no hay ampolleta que cambiar.']
+      ]],
+      ['ADAS', [
+        ['Suzuki Safety Support', 'según versión', 0, 'Si tu versión lo trae, la cámara va en el parabrisas. Cambiar el parabrisas obliga a recalibrar.']
       ]]
     ],
     plan: [
-      ['Plan de mantención', 'Sigue el cuadernillo de mantención del vehículo. Salirse de él en un auto nuevo puede costarte la garantía.']
+      ['La fuente válida', 'El cuadernillo de mantención del vehículo. Salirse de él en un auto nuevo puede costarte la garantía.'],
+      ['Dónde confirmar todo', 'Derco o el concesionario Suzuki, con tu VIN. Es gratis y es exacto, y evita las tres o cuatro cifras que en internet aparecen mezcladas entre mercados.']
     ]
   }
 };
