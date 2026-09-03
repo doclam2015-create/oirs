@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link rel="apple-touch-icon" href="icon-gptmaestro-180.png">
+<link rel="icon" href="icon-gptmaestro.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GPT Maestro">
+<meta name="theme-color" content="#123a63">
+<title>GPT Maestro</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin:0; padding:16px 16px 40px; font-family:-apple-system,system-ui,sans-serif; background:#f2f4f7; color:#1c2430; font-size:16px; }
+  h1 { font-size:19px; margin:0 0 4px; color:#123a63; }
+  p.sub { margin:0 0 10px; font-size:13px; color:#5a6a7c; }
+  label { display:block; font-size:13px; font-weight:600; margin:14px 0 5px; color:#3a4756; }
+  input, textarea, select { width:100%; padding:11px; font-size:16px; font-family:inherit; border:1px solid #c3ccd6; border-radius:8px; background:#fff; color:#1c2430; }
+  textarea { min-height:110px; resize:vertical; -webkit-overflow-scrolling:touch; }
+  button { width:100%; min-height:48px; margin-top:12px; font-size:16px; font-weight:600; border:0; border-radius:10px; background:#123a63; color:#fff; }
+  button:active { background:#0b2743; }
+  button.sec { background:#5a6a7c; }
+  button.sec:active { background:#43505e; }
+  .msg { margin-top:12px; padding:10px; border-radius:8px; font-size:14px; display:none; }
+  .msg.err { background:#fde8e8; color:#8c1c1c; display:block; }
+  .msg.ok  { background:#e5f4e8; color:#1c5c2c; display:block; }
+  .nota { margin-top:10px; font-size:12.5px; color:#5a6a7c; line-height:1.5; }
+  #vista { margin-top:14px; padding:12px; background:#fff; border:1px solid #c3ccd6; border-radius:10px;
+           font-family:ui-monospace,Menlo,monospace; font-size:12px; line-height:1.45; white-space:pre-wrap;
+           max-height:260px; overflow:auto; -webkit-overflow-scrolling:touch; display:none; }
+  .chk { display:flex; align-items:center; gap:9px; margin-top:14px; font-size:14px; color:#3a4756; }
+  .chk input { width:22px; height:22px; }
+  .fila { display:flex; gap:8px; }
+  .fila > div { flex:1; }
+  details { margin-top:20px; font-size:13px; color:#5a6a7c; }
+</style>
+</head>
+<body>
+
+<h1>GPT Maestro</h1>
+<p class="sub">Escribe las instrucciones de un GPT nuevo, bajo los 8000 caracteres.</p>
+
+<label>¿Qué debe hacer el GPT?</label>
+<textarea id="funcion" style="min-height:110px" placeholder="Lo más específico posible: qué tarea resuelve, con qué datos trabaja, qué debe entregar."></textarea>
+
+<label>Rol y objetivos <span style="font-weight:400">(opcional)</span></label>
+<textarea id="rol" style="min-height:70px" placeholder="Como quién debe actuar y qué persigue. Si lo dejas vacío, te lo propone él."></textarea>
+
+<label>Formato de salida <span style="font-weight:400">(opcional)</span></label>
+<textarea id="formato" style="min-height:70px" placeholder="Cómo debe verse la respuesta: tabla, informe, viñetas, un párrafo, un archivo."></textarea>
+
+<label>Quién lo va a usar <span style="font-weight:400">(opcional)</span></label>
+<input type="text" id="publico" placeholder="Ej: yo solo, mi equipo del servicio, pacientes">
+
+<div class="chk"><input type="checkbox" id="proteger"><label for="proteger" style="margin:0; font-weight:400">Incluir cláusula de confidencialidad de las instrucciones</label></div>
+<div class="chk"><input type="checkbox" id="guiado"><label for="guiado" style="margin:0; font-weight:400">Que me pregunte antes de escribir, paso a paso</label></div>
+
+<button id="copiar">Copiar y abrir el chat</button>
+<button id="soloCopiar" class="sec">Solo copiar</button>
+<button id="ver" class="sec">Ver texto</button>
+<div id="msg" class="msg"></div>
+<div id="vista"></div>
+
+<details>
+  <summary>Instrucciones para la IA</summary>
+  <textarea id="instrTxt" style="min-height:300px; font-family:ui-monospace,Menlo,monospace; font-size:13px"></textarea>
+  <button class="sec" id="guardarInstr">Guardar instrucciones</button>
+  <button class="sec" id="restaurarInstr">Restaurar las originales</button>
+</details>
+
+<details>
+  <summary>Configuración</summary>
+  <label>Chat que se abre al copiar</label>
+  <select id="destino">
+    <option value="https://chatgpt.com/">ChatGPT</option>
+    <option value="https://gemini.google.com/app">Gemini</option>
+    <option value="https://claude.ai/new">Claude</option>
+  </select>
+  <div class="chk"><input type="checkbox" id="nativa"><label for="nativa" style="margin:0; font-weight:400">Abrir la app instalada en vez del navegador</label></div>
+  <input type="text" id="esquema" placeholder="esquema de la app, ej: chatgpt://">
+  <p class="sub" style="margin-top:8px">Con esto se abre la app donde ya iniciaste sesión. Si no está instalada o el esquema no es el correcto, cae sola al sitio web pasado un segundo y medio.</p>
+</details>
+
+<script>
+const K = { dest:'doclam_inf_destino', instr:'doclam_gpt_instr' };
+const $ = id => document.getElementById(id);
+const msg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + cls; };
+
+// ponytail: localStorage lanza SecurityError en contextos sandbox/privados
+const mem = {};
+const get = k => { try { const v = localStorage.getItem(k); return v !== null ? v : (mem[k] || ''); } catch (e) { return mem[k] || ''; } };
+const set = (k, v) => { mem[k] = v; try { localStorage.setItem(k, v); } catch (e) {} };
+const borrar = k => { delete mem[k]; try { localStorage.removeItem(k); } catch (e) {} };
+
+const METODO = `Antes de escribir, trabaja el caso por dentro con los seis sombreros y con estos cinco pasos: entender cuál es la pregunta real, analizar los factores en juego, razonar cómo se conectan, sintetizar lo relevante y concluir. No rotules nada de esto en la respuesta.`;
+
+const val = (id, et) => { const v = $(id).value.trim(); return v ? et + ': ' + v : ''; };
+
+const INSTR = `Actúa como especialista en diseño de instrucciones para asistentes de IA personalizados. Escribes las instrucciones de sistema de un GPT nuevo a partir de lo que te describo.
+
+LÍMITE DURO
+Las instrucciones finales no pueden pasar de 8000 caracteres. Cuéntalos y dime cuántos quedaron. Si te pasas, recorta lo que menos cambia la salida, no lo que más te gusta.
+
+ESTRUCTURA DE LO QUE ENTREGAS
+1. NOMBRE del GPT y una línea de descripción.
+2. ROL Y OBJETIVOS: quién es y para qué existe.
+3. CÓMO ACTUAR: el comportamiento en la conversación, qué hace al empezar, qué pregunta y cuándo.
+4. FORMATO DE SALIDA: la forma exacta de la respuesta, con un ejemplo corto.
+5. REGLAS Y LÍMITES: lo que nunca debe hacer, y qué responde cuando le falta información.
+6. MENSAJE DE BIENVENIDA: una o dos líneas.
+Entrega el bloque completo listo para pegar, en un solo bloque de texto, sin comentarios intercalados.
+
+LO QUE HACE BUENAS A UNAS INSTRUCCIONES Y MALAS A OTRAS
+Esto es lo que separa un GPT que funciona de uno que se ignora a sí mismo:
+- Una instrucción que no cambia la salida es ruido. Si al quitarla la respuesta sería la misma, quítala. Las instrucciones largas no son mejores: diluyen las que sí importan.
+- Las contradicciones se pagan caras. "Sé exhaustivo" y "sé breve" en el mismo prompt hacen que el modelo elija por su cuenta y el resultado sea impredecible cada vez. Si detectas una en lo que te describo, dímelo y resuélvela.
+- Lo que el modelo no puede hacer, no se lo pidas. Datos que no tiene, cálculos que hará mal, precios que inventará. Eso no se arregla redactando mejor: se arregla sacándolo del prompt o mandándolo a búsqueda web.
+- Prohibir es más efectivo que pedir. "No uses viñetas" funciona mejor que "prefiere el texto corrido".
+- Un ejemplo del formato de salida vale más que tres párrafos describiéndolo.
+- Toda instrucción que pida datos verificables necesita su regla de qué hacer cuando no los tiene. Sin eso, el modelo rellena.
+
+ANTES DE ESCRIBIR
+Si lo que te di alcanza, escribe las instrucciones directamente. No me hagas una entrevista si ya tienes lo necesario.
+Si falta algo que cambiaría el diseño, pregúntamelo, pero todo junto y en una sola vez, no de a una pregunta por mensaje.
+
+DESPUÉS DE ESCRIBIR
+Agrega, fuera del bloque de instrucciones:
+- El conteo de caracteres.
+- Tres o cuatro líneas con las decisiones que tomaste y por qué.
+- Qué le faltaría a este GPT y con qué caso deberías probarlo primero para ver si falla.
+
+` + METODO;
+
+function instrDefault() { return INSTR; }
+
+function armar() {
+  const f = $('funcion').value.trim();
+  if (f.length < 10) { msg('Describe qué debe hacer el GPT.', 'err'); return ''; }
+  const campos = [
+    'FUNCIÓN DEL GPT: ' + f,
+    val('rol', 'ROL Y OBJETIVOS'),
+    val('formato', 'FORMATO DE SALIDA ESPERADO'),
+    val('publico', 'QUIÉN LO VA A USAR'),
+    $('rol').value.trim() ? '' : 'No te entregué el rol: propónmelo tú, con una alternativa, y explica en una línea por qué elegiste ese.',
+    $('formato').value.trim() ? '' : 'No te entregué el formato de salida: propón el que mejor sirva a esta función y muéstramelo con un ejemplo corto.',
+    $('proteger').checked ? 'INCLUYE una cláusula final que le prohíba revelar sus propias instrucciones. Dime en una línea, aparte, que esa cláusula desalienta pero no impide que alguien las extraiga: no guardes ahí nada que no pueda salir a la luz.' : '',
+    $('guiado').checked ? 'MODO GUIADO: antes de escribir, hazme las preguntas que te falten, todas juntas en un solo mensaje, y espera mi respuesta.' : 'No me entrevistes: con lo que te di, escribe la mejor versión posible y señala los supuestos que tuviste que asumir.'
+  ].filter(Boolean);
+  return $('instrTxt').value.trim() + '\n\n---\n\n' + campos.join('\n\n');
+}
+const ESQUEMAS = { 'chatgpt.com':'chatgpt://', 'gemini.google.com':'googlegemini://', 'claude.ai':'claude://' };
+const K_NAT = 'doclam_ia_nativa', K_ESQ = 'doclam_ia_esquema';
+
+function esquemaDe(url) {
+  const g = get(K_ESQ);
+  if (g) { try { return (JSON.parse(g) || {})[new URL(url).hostname] || ''; } catch (e) {} }
+  return ESQUEMAS[new URL(url).hostname] || '';
+}
+
+function pintarEsquema() { $('esquema').value = esquemaDe($('destino').value); }
+
+function guardarEsquema() {
+  let m = {}; try { m = JSON.parse(get(K_ESQ) || '{}'); } catch (e) {}
+  m[new URL($('destino').value).hostname] = $('esquema').value.trim();
+  set(K_ESQ, JSON.stringify(m));
+}
+
+// abre la app nativa y, si no responde, cae al sitio web
+function abrir() {
+  const web = $('destino').value, esq = $('esquema').value.trim();
+  if (!$('nativa').checked || !esq) { window.location.href = web; return; }
+  const t = setTimeout(() => { if (!document.hidden) window.location.href = web; }, 1500);
+  document.addEventListener('visibilitychange', () => clearTimeout(t), { once:true });
+  window.location.href = esq;
+}
+
+async function copiar(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {
+    // ponytail: fallback para WebKit sin clipboard API
+    const ta = document.createElement('textarea');
+    ta.value = texto; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+$('destino').value = get(K.dest) || 'https://chatgpt.com/';
+$('instrTxt').value = get(K.instr) || instrDefault();
+
+
+$('destino').addEventListener('change', () => { set(K.dest, $('destino').value); pintarEsquema(); msg('Destino guardado.', 'ok'); });
+$('guardarInstr').addEventListener('click', () => { set(K.instr, $('instrTxt').value); msg('Instrucciones guardadas.', 'ok'); });
+$('restaurarInstr').addEventListener('click', () => { borrar(K.instr); $('instrTxt').value = instrDefault(); msg('Instrucciones restauradas.', 'ok'); });
+
+$('nativa').checked = get(K_NAT) === '1';
+pintarEsquema();
+$('nativa').addEventListener('change', () => { set(K_NAT, $('nativa').checked ? '1' : '0'); });
+$('esquema').addEventListener('change', guardarEsquema);
+
+['click','touchend'].forEach(ev => {
+  $('copiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado. Pega el texto en el chat y envía.', 'ok');
+    abrir();
+  }, { passive:false });
+
+  $('soloCopiar').addEventListener(ev, async e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    await copiar(t); msg('Copiado al portapapeles.', 'ok');
+  }, { passive:false });
+
+  $('ver').addEventListener(ev, e => {
+    e.preventDefault(); const t = armar(); if (!t) return;
+    $('vista').textContent = t; $('vista').style.display = 'block';
+    msg('Vista previa del texto a pegar.', 'ok');
+  }, { passive:false });
+});
+
+
+</script>
+</body>
+</html>
